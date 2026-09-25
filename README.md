@@ -2,6 +2,12 @@
 
 A private, responsive finance app built with Next.js, Supabase, Tailwind CSS, and Recharts. It supports transaction entry, custom lists, monthly dashboards, reports, a spending calendar, reviewed recurring transactions, currency conversion, dark mode, and CSV export.
 
+## Preview
+
+The dashboard below uses fictional demo transactions. Run `npm run demo` to create the same kind of sample data locally.
+
+![My Finance dashboard with fictional sample data](docs/dashboard-demo.jpg)
+
 ## Run on your laptop (no account needed)
 
 1. Open this folder in VS Code and open **Terminal → New Terminal**.
