@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.*
+!.env.example
+.vercel
+*.tsbuildinfo
+npm-debug.log*
+.local-data/
+exports/
+finance-export*.csv
+supabase/.temp/
