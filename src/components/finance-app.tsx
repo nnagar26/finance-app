@@ -28,6 +28,7 @@ const months = ['January','February','March','April','May','June','July','August
 const fetchJson = async <T,>(url: string): Promise<T> => { const response = await fetch(url, { cache: 'no-store' }); const json = await response.json(); if (!response.ok) throw new Error(json.error || 'Unable to load data.'); return json as T; };
 
 export default function FinanceApp({ section, email, localMode = false }: { section: string; email: string; localMode?: boolean }) {
+  const router = useRouter();
   const initial = new Date();
   const [year, setYear] = useState(initial.getFullYear());
   const [month, setMonth] = useState(initial.getMonth() + 1);
