@@ -38,6 +38,9 @@ export async function accountStatus() {
   const identity = await verifiedIdentity();
   if (!identity) return null;
   const { data, error } = await identity.db.rpc('account_deletion_status');
+  // Keep existing deployments healthy while the account-deletion migration is
+  // being rolled out. The feature remains unavailable until its RPC exists.
+  if (error?.code === 'PGRST202' || error?.message?.includes('account_deletion_status')) return null;
   if (error) throw error;
   return data as DeletionStatus | null;
 }
