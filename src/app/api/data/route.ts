@@ -5,6 +5,7 @@ import type { Transaction } from '@/lib/types';
 import { applyRate, rateKey } from '@/lib/exchange-rates';
 import { isLocalMode } from '@/lib/local-mode';
 import { localView } from '@/lib/local-ledger';
+import { accountStatus } from '@/lib/account-deletion';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
     const db = await serverSupabase();
     const { data: { user }, error: authError } = await db.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: 'Please sign in.' }, { status: 401 });
+    if (await accountStatus()) return NextResponse.json({ error: 'Account deletion is pending.' }, { status: 403 });
     const view = request.nextUrl.searchParams.get('view') ?? 'overview';
     const owner = user.id;
     if (view === 'meta') {

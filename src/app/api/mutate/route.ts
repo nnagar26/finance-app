@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { serverSupabase } from '@/lib/supabase-server';
+import { accountStatus } from '@/lib/account-deletion';
 import { isLocalMode } from '@/lib/local-mode';
 import { localMutation } from '@/lib/local-ledger';
 import { fetchHistoricalRate, isSupportedCurrency, rateKey } from '@/lib/exchange-rates';
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
     const db = await serverSupabase();
     const { data: { user } } = await db.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Please sign in.' }, { status: 401 });
+    if (await accountStatus()) return NextResponse.json({ error: 'Account deletion is pending.' }, { status: 403 });
     const owner_id = user.id;
     const body = await request.json();
     const action = z.string().parse(body.action);

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isConfigured, serverSupabase } from '@/lib/supabase-server';
+import { accountStatus } from '@/lib/account-deletion';
 
 export async function GET(request: NextRequest) {
   const redirect = new URL('/login?error=oauth', request.url);
@@ -10,7 +11,9 @@ export async function GET(request: NextRequest) {
     const db = await serverSupabase();
     const { error } = await db.auth.exchangeCodeForSession(code);
     if (error) throw error;
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    if (await accountStatus()) return NextResponse.redirect(new URL('/account-recovery', request.url));
+    const target = request.nextUrl.searchParams.get('next') === 'delete' ? '/settings?delete=confirm' : '/dashboard';
+    return NextResponse.redirect(new URL(target, request.url));
   } catch {
     return NextResponse.redirect(redirect);
   }

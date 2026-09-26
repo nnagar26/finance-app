@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { serverSupabase } from '@/lib/supabase-server';
+import { accountStatus } from '@/lib/account-deletion';
 import { csvCell } from '@/lib/csv';
 import { isLocalMode } from '@/lib/local-mode';
 import { localCsv } from '@/lib/local-ledger';
@@ -15,6 +16,7 @@ export async function GET() {
   const db = await serverSupabase();
   const { data: { user } } = await db.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Please sign in.' }, { status: 401 });
+  if (await accountStatus()) return NextResponse.json({ error: 'Account deletion is pending.' }, { status: 403 });
   const [categories, methods, accounts, tags, settings, exchangeRates] = await Promise.all([
     db.from('categories').select('id,name').eq('owner_id', user.id),
     db.from('payment_methods').select('id,name').eq('owner_id', user.id),

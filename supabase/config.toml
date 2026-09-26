@@ -1,0 +1,2 @@
+[functions.purge-deleted-accounts]
+verify_jwt = false

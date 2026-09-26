@@ -31,9 +31,9 @@ if (existsSync(localLedgerPath)) {
   }
 }
 const assignmentPatterns = [
-  new RegExp('NEXT_PUBLIC_' + 'SUPABASE_URL\\s*=\\s*https?://', 'i'),
-  new RegExp('NEXT_PUBLIC_' + 'SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\\S+', 'i'),
-  new RegExp('SUPABASE_' + 'SERVICE_ROLE_KEY\\s*=\\s*\\S+', 'i'),
+  new RegExp('NEXT_PUBLIC_' + 'SUPABASE_URL[ \\t]*=[ \\t]*https?://', 'i'),
+  new RegExp('NEXT_PUBLIC_' + 'SUPABASE_PUBLISHABLE_KEY[ \\t]*=[ \\t]*\\S+', 'i'),
+  new RegExp('SUPABASE_' + 'SERVICE_ROLE_KEY[ \\t]*=[ \\t]*\\S+', 'i'),
   new RegExp('-----BEGIN ' + '(?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
   new RegExp('sb_' + 'secret_[A-Za-z0-9_-]+'),
 ];
