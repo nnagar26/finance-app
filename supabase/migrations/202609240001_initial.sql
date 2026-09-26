@@ -135,6 +135,7 @@ begin
   return new;
 end $$;
 create trigger on_finance_user_created after insert on auth.users for each row execute function public.seed_finance_owner();
+revoke execute on function public.seed_finance_owner() from public, anon, authenticated;
 
 do $$ declare t text; begin
   foreach t in array array['user_settings','categories','accounts','payment_methods','tags','recurring_rules','recurring_occurrences','transactions','transaction_tags','currency_conversion_batches','currency_conversion_lines'] loop
@@ -204,7 +205,7 @@ create or replace function public.convert_ledger(p_to text, p_rate numeric)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare s public.user_settings%rowtype; b_id uuid; v_old bigint; v_new bigint; rec record;
 begin
-  if auth.uid() is null or p_to not in ('CAD','USD','EUR','GBP','AUD') or p_rate <= 0 or p_rate > 1000000 then
+  if auth.uid() is null or p_to not in ('CAD','USD','EUR','GBP','AUD','INR') or p_rate <= 0 or p_rate > 1000000 then
     raise exception 'Invalid currency or rate';
   end if;
   perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 0));

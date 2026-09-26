@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { localDate, parseMoneyInput } from '@/lib/finance';
 import type { Meta, Transaction, TransactionType, FinancialEffect } from '@/lib/types';
@@ -9,6 +9,8 @@ import { SUPPORTED_CURRENCIES } from '@/lib/exchange-rates';
 export default function TransactionModal({ meta, transaction, tagIds = [], onClose, onSaved }: {
   meta: Meta; transaction?: Transaction | null; tagIds?: string[]; onClose: () => void; onSaved: () => Promise<void>;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
   const [date, setDate] = useState(transaction?.transaction_date ?? localDate(new Date(), meta.settings.time_zone));
   const [amount, setAmount] = useState(transaction ? (transaction.amount_minor / 100).toFixed(2) : '');
   const [currency, setCurrency] = useState(transaction?.currency_code ?? meta.settings.currency_code);
@@ -24,7 +26,23 @@ export default function TransactionModal({ meta, transaction, tagIds = [], onClo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => { const handler = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); }; window.addEventListener('keydown', handler); return () => window.removeEventListener('keydown', handler); }, [onClose]);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = () => [...(dialogRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])]
+      .filter(element => !element.hasAttribute('hidden'));
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { closeRef.current(); return; }
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      if (!elements.length) { event.preventDefault(); return; }
+      const first = elements[0]; const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => { window.removeEventListener('keydown', handler); previousFocus?.focus(); };
+  }, []);
   async function save(event: React.FormEvent) {
     event.preventDefault(); setError(''); setBusy(true);
     try {
@@ -42,7 +60,7 @@ export default function TransactionModal({ meta, transaction, tagIds = [], onClo
   }
   const categoryKind = type === 'income' || type === 'other' && effect === 'income' ? 'income' : 'expense';
   const categories = meta.categories.filter(c => c.active || c.id === category).filter(c => c.kind === 'both' || c.kind === categoryKind);
-  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-label={transaction ? 'Edit transaction' : 'Add transaction'}>
+  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className="modal" ref={dialogRef} role="dialog" aria-modal="true" aria-label={transaction ? 'Edit transaction' : 'Add transaction'}>
     <div className="modal-head"><div><div className="eyebrow">YOUR LEDGER</div><h2>{transaction ? 'Edit transaction' : 'Add transaction'}</h2></div><button className="icon-button" aria-label="Close" onClick={onClose}><X size={20} /></button></div>
     <form onSubmit={save} className="stack gap-md">
       <div className="type-pills">{(['expense','income','other'] as TransactionType[]).map(v => <button type="button" className={`pill ${v} ${type === v ? 'selected' : ''}`} key={v} onClick={() => { setType(v); setCategory(''); if (v === 'other') setEffect('neutral'); }}>{v[0].toUpperCase() + v.slice(1)}</button>)}</div>

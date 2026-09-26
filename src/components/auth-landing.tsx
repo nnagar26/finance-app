@@ -11,8 +11,7 @@ export default function AuthLanding() {
     let active = true;
     try {
       const db = browserSupabase();
-      // Supabase processes the token in its default email link while the
-      // browser client initializes. getUser waits for that initialization.
+      // Let the browser client finish restoring its cookie-backed session.
       db.auth.getUser().then(({ data }) => {
         if (!active) return;
         window.location.replace(data.user ? '/dashboard' : '/login');
@@ -27,8 +26,8 @@ export default function AuthLanding() {
 
   return <main className="auth-page"><div className="auth-card">
     <div className="brand-mark">M</div>
-    <h1>{error ? 'Sign-in link unavailable' : 'Opening your finances…'}</h1>
+    <h1>{error ? 'Sign-in unavailable' : 'Opening your finances…'}</h1>
     <p>{error || 'Checking your private session.'}</p>
-    {error && <Link className="button primary" href="/login">Request a new link</Link>}
+    {error && <Link className="button primary" href="/login">Try signing in again</Link>}
   </div></main>;
 }

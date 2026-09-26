@@ -21,8 +21,8 @@ where type = 'transfer'::public.transaction_type;
 create table if not exists public.exchange_rates (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
-  base_currency text not null check (base_currency in ('CAD','USD','EUR','GBP','AUD')),
-  quote_currency text not null check (quote_currency in ('CAD','USD','EUR','GBP','AUD')),
+  base_currency text not null check (base_currency in ('CAD','USD','EUR','GBP','AUD','INR')),
+  quote_currency text not null check (quote_currency in ('CAD','USD','EUR','GBP','AUD','INR')),
   requested_date date not null,
   effective_date date not null,
   rate numeric(24,12) not null check (rate > 0),

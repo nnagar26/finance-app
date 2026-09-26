@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -45,6 +45,8 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const currency = meta?.settings.currency_code ?? 'CAD';
   const themePreference = meta?.settings.theme;
   const money = useCallback((v: number) => formatMoney(v, currency), [currency]);
@@ -79,6 +81,22 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
     if (theme === 'system') media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
   }, [themePreference]);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 780px)');
+    const updateViewport = () => {
+      setIsMobileViewport(media.matches);
+      if (!media.matches) setMobileMenu(false);
+    };
+    updateViewport();
+    media.addEventListener('change', updateViewport);
+    return () => media.removeEventListener('change', updateViewport);
+  }, []);
+
+  function openMobileMenu() { setMobileMenu(true); }
+  function closeMobileMenu() {
+    setMobileMenu(false);
+    requestAnimationFrame(() => menuButtonRef.current?.focus());
+  }
 
   async function mutate(payload: Record<string, unknown>) {
     setBusy(true); setError('');
@@ -128,12 +146,12 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const dueCount = meta?.recurring_rules.filter(r => r.active && r.next_due_on <= localDate(new Date(), meta.settings.time_zone)).length ?? 0;
 
   return <div className="app-shell">
-    <aside className={`sidebar ${mobileMenu ? 'sidebar-open' : ''}`}>
-      <div className="brand"><div className="brand-mark">M</div><div><strong>myfinance<span>.</span></strong><small>PERSONAL FINANCE</small></div><button className="mobile-close icon-button" onClick={() => setMobileMenu(false)} aria-label="Close menu"><X size={20}/></button></div>
-      <div className="nav-label">WORKSPACE</div><nav className="side-nav">{links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={() => setMobileMenu(false)} className={section === href.slice(1) ? 'nav-link active' : 'nav-link'}><Icon size={19} strokeWidth={1.9}/><span>{label}</span>{label === 'Recurring' && dueCount > 0 && <em>{dueCount}</em>}</Link>)}</nav>
+    <aside className={`sidebar ${mobileMenu ? 'sidebar-open' : ''}`} aria-hidden={isMobileViewport && !mobileMenu ? true : undefined} inert={isMobileViewport && !mobileMenu ? true : undefined}>
+      <div className="brand"><div className="brand-mark">M</div><div><strong>myfinance<span>.</span></strong><small>PERSONAL FINANCE</small></div><button className="mobile-close icon-button" onClick={closeMobileMenu} aria-label="Close menu"><X size={20}/></button></div>
+      <div className="nav-label">WORKSPACE</div><nav className="side-nav">{links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={closeMobileMenu} className={section === href.slice(1) ? 'nav-link active' : 'nav-link'}><Icon size={19} strokeWidth={1.9}/><span>{label}</span>{label === 'Recurring' && dueCount > 0 && <em>{dueCount}</em>}</Link>)}</nav>
       <div className="sidebar-bottom"><div className="privacy-card"><div className="privacy-icon"><Wallet size={18}/></div><strong>Your money, clearly.</strong><span>A calmer way to see your financial life.</span></div><div className="account-chip"><div className="avatar">{email.slice(0,1).toUpperCase()}</div><div><strong>{localMode ? 'Local workspace' : 'Personal account'}</strong><small>{email}</small></div></div></div>
     </aside>
-    <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" onClick={() => setMobileMenu(true)} aria-label="Open menu"><Menu size={22}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select><button className="button primary add-top" onClick={openAdd}><Plus size={18}/> Add transaction</button></div></header>
+    <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" ref={menuButtonRef} onClick={openMobileMenu} aria-label="Open menu" aria-expanded={mobileMenu}><Menu size={22}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select><button className="button primary add-top" onClick={openAdd}><Plus size={18}/> Add transaction</button></div></header>
       <main className="content">
         {localMode && <div className="notice">Local mode · Data is saved in this project’s .local-data folder on this laptop.</div>}
         {error && <div className="error-box page-error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
@@ -145,9 +163,9 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
           </> : <Loading/>}
         </>}
         {section === 'transactions' && <>
-          <PageHeading eyebrow="LEDGER" title="Transactions" description="Every detail, all in one place." right={<button className="button secondary" onClick={() => setShowFilters(!showFilters)}><ListFilter size={17}/> Filters</button>}/>
-          <div className="panel transaction-panel"><div className="transaction-toolbar"><div className="search-box"><Search size={18}/><input placeholder="Search descriptions and notes…" value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value, page: '1' })}/></div><select aria-label="Sort transactions" value={filters.order} onChange={e => setFilters({ ...filters, order: e.target.value, page: '1' })}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount_desc">Highest amount</option><option value="amount_asc">Lowest amount</option></select></div><div className="quick-ranges" aria-label="Quick date filters"><button className={!filters.from && !filters.to && !filters.month && !filters.year ? 'active' : ''} onClick={() => setQuickDateRange(null)}>All dates</button><button className={quickRangeActive(7) ? 'active' : ''} onClick={() => setQuickDateRange(7)}>Last 7 days</button><button className={quickRangeActive(30) ? 'active' : ''} onClick={() => setQuickDateRange(30)}>Last 30 days</button></div>
-            {showFilters && <div className="filters-grid"><label className="field"><span>From</span><input type="date" value={filters.from} onChange={e => setFilters({ ...filters, from: e.target.value, page: '1' })}/></label><label className="field"><span>To</span><input type="date" value={filters.to} onChange={e => setFilters({ ...filters, to: e.target.value, page: '1' })}/></label>
+          <PageHeading eyebrow="LEDGER" title="Transactions" description="Every detail, all in one place." right={<button className="button secondary" onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters} aria-controls="transaction-filters"><ListFilter size={17}/> Filters</button>}/>
+          <div className="panel transaction-panel"><div className="transaction-toolbar"><div className="search-box"><Search size={18}/><input aria-label="Search transactions" placeholder="Search descriptions and notes…" value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value, page: '1' })}/></div><select aria-label="Sort transactions" value={filters.order} onChange={e => setFilters({ ...filters, order: e.target.value, page: '1' })}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount_desc">Highest amount</option><option value="amount_asc">Lowest amount</option></select></div><div className="quick-ranges" aria-label="Quick date filters"><button className={!filters.from && !filters.to && !filters.month && !filters.year ? 'active' : ''} onClick={() => setQuickDateRange(null)}>All dates</button><button className={quickRangeActive(7) ? 'active' : ''} onClick={() => setQuickDateRange(7)}>Last 7 days</button><button className={quickRangeActive(30) ? 'active' : ''} onClick={() => setQuickDateRange(30)}>Last 30 days</button></div>
+            {showFilters && <div className="filters-grid" id="transaction-filters"><label className="field"><span>From</span><input type="date" value={filters.from} onChange={e => setFilters({ ...filters, from: e.target.value, page: '1' })}/></label><label className="field"><span>To</span><input type="date" value={filters.to} onChange={e => setFilters({ ...filters, to: e.target.value, page: '1' })}/></label>
               <label className="field"><span>Month</span><select value={filters.month} onChange={e => setFilters({ ...filters, month: e.target.value, page: '1' })}><option value="">Any month</option>{months.map((m,i) => <option key={m} value={i+1}>{m}</option>)}</select></label><label className="field"><span>Year</span><input type="number" min="1900" max="2200" placeholder="Any year" value={filters.year} onChange={e => setFilters({ ...filters, year: e.target.value, page: '1' })}/></label>
               <label className="field"><span>Type</span><select value={filters.type} onChange={e => setFilters({ ...filters, type: e.target.value, page: '1' })}><option value="">All types</option>{['expense','income','other'].map(x => <option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}</select></label>
               <label className="field"><span>Category</span><select value={filters.category} onChange={e => setFilters({ ...filters, category: e.target.value, page: '1' })}><option value="">All categories</option>{meta?.categories.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>

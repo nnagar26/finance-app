@@ -1,6 +1,6 @@
 import type { ExchangeRate, Transaction } from './types';
 
-export const SUPPORTED_CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD'] as const;
+export const SUPPORTED_CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD', 'INR'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 
 export function isSupportedCurrency(value: string): value is SupportedCurrency {
@@ -15,10 +15,13 @@ export async function fetchHistoricalRate(base: string, quote: string, requested
   if (!isSupportedCurrency(base) || !isSupportedCurrency(quote)) throw new Error('Unsupported currency.');
   if (base === quote) return { base_currency: base, quote_currency: quote, requested_date: requestedDate,
     effective_date: requestedDate, rate: 1, source: 'identity', fetched_at: new Date().toISOString() };
-  if (requestedDate > new Date().toISOString().slice(0, 10)) throw new Error(`No published exchange rate exists yet for ${requestedDate}.`);
+  // A future-dated transaction cannot have a historical rate yet. Use the
+  // latest published rate, but retain the transaction date as the cache key.
+  const latestPublishedDate = new Date().toISOString().slice(0, 10);
+  const rateDate = requestedDate > latestPublishedDate ? latestPublishedDate : requestedDate;
   let response: Response;
   try {
-    response = await fetch(`https://api.frankfurter.dev/v2/rate/${base}/${quote}?date=${requestedDate}`, {
+    response = await fetch(`https://api.frankfurter.dev/v2/rate/${base}/${quote}?date=${rateDate}`, {
       headers: { Accept: 'application/json' }, cache: 'no-store', signal: AbortSignal.timeout(8000),
     });
   } catch {

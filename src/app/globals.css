@@ -17,3 +17,45 @@ html[data-theme=dark]{--bg:#212121;--surface:#2f2f2f;--surface-soft:#383838;--te
 .report-chart-heading{gap:16px;flex-wrap:wrap}.report-metric-switch{display:flex;gap:4px;padding:4px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft)}.report-metric-switch button{border:0;border-radius:6px;background:transparent;color:var(--muted);padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer}.report-metric-switch button:hover{color:var(--text)}.report-metric-switch button.active.expenses{background:color-mix(in srgb,var(--coral) 14%,var(--surface));color:var(--coral)}.report-metric-switch button.active.income{background:color-mix(in srgb,var(--green) 14%,var(--surface));color:var(--green)}.report-metric-switch button:focus-visible{outline:2px solid var(--text);outline-offset:2px}
 .report-metric-switch button.active.both{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 html[data-theme=dark] .brand-mark,html[data-theme=dark] .button.primary,html[data-theme=dark] .mobile-add{background:#ececec;color:#212121;box-shadow:none}html[data-theme=dark] .button.primary:hover{background:#fff}html[data-theme=dark] .brand strong span{color:#c8c8c8}html[data-theme=dark] .nav-label,html[data-theme=dark] .eyebrow{color:#a1a1aa}html[data-theme=dark] .nav-link{color:#b4b4b4}html[data-theme=dark] .nav-link.active{background:#414141;color:#fff}html[data-theme=dark] .nav-link em{background:#4a4a4a;color:#ececec}html[data-theme=dark] .privacy-card{background:#383838;color:#ececec}html[data-theme=dark] .privacy-card .privacy-icon,html[data-theme=dark] .avatar{background:#4a4a4a;color:#ececec}html[data-theme=dark] .privacy-card span{color:#b4b4b4}html[data-theme=dark] .metric-icon.green,html[data-theme=dark] .transaction-icon.incoming{background:#294637;color:#73c991}html[data-theme=dark] .metric-icon.coral,html[data-theme=dark] .transaction-icon.outgoing{background:#4d302e;color:#ef8b82}html[data-theme=dark] .metric-icon.blue,html[data-theme=dark] .transaction-icon.neutral{background:#414141;color:#b8c0cb}html[data-theme=dark] .pill.expense.selected{background:#4d302e;color:#ef8b82;border-color:#71413e}html[data-theme=dark] .pill.income.selected{background:#294637;color:#73c991;border-color:#39624b}html[data-theme=dark] .pill.other.selected{background:#494949;color:#ececec;border-color:#606060}html[data-theme=dark] .field>span,html[data-theme=dark] .metric-top,html[data-theme=dark] .breakdown-line span{color:#b4b4b4}html[data-theme=dark] .calendar-cell.selected{border-color:#777}html[data-theme=dark] .text-button{color:#d1d1d1}html[data-theme=dark] .danger-text{color:#ef8b82}html[data-theme=dark] .rule-icon,html[data-theme=dark] .empty-icon{color:#c4c4c4;background:#414141}html[data-theme=dark] .calendar-cell strong{color:#c4c4c4}html[data-theme=dark] .due-panel{border-color:var(--border)}html[data-theme=dark] .auth-page{background:var(--bg)}html[data-theme=dark] .modal-backdrop{background:rgba(0,0,0,.62)}html[data-theme=dark] ::selection{background:#666;color:#fff}
+.auth-foot{justify-content:space-between}.auth-foot>span{display:flex;align-items:center;gap:5px}.auth-foot .auth-mode-button{margin:0;padding:0;font-size:10px}
+
+/* Hosted account access, inspired by the supplied Dribbble reference. */
+.auth-login-page{background:#eef0f2;color:#06070a;padding:24px}
+html[data-theme=dark] .auth-login-page{background:#eef0f2;color:#06070a}
+.auth-login-page .login-card{width:min(100%,430px);padding:32px 34px 27px;border:1px solid #e0e3e7;border-radius:20px;background:#fff;box-shadow:0 28px 70px rgba(24,28,36,.07)}
+.auth-brand{display:flex;align-items:center;gap:11px;margin-bottom:30px;font-size:12px;font-weight:800;letter-spacing:.16em}
+.auth-login-page .brand-mark,html[data-theme=dark] .auth-login-page .brand-mark{width:35px;height:35px;margin:0;border-radius:10px;background:#101116;color:#fff;box-shadow:none;font-size:23px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid #e3e5e9;background:#f6f7f8;border-radius:10px;margin-bottom:31px}
+.auth-tabs button{min-height:38px;border:0;border-radius:7px;background:transparent;color:#565c69;font-size:12px;font-weight:700;transition:background .15s,color .15s,box-shadow .15s}
+.auth-tabs button.active{background:#fff;color:#06070a;box-shadow:0 1px 5px rgba(20,23,30,.12)}
+.auth-login-page .eyebrow{color:#747780;margin-bottom:10px}
+.auth-login-page h1{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#06070a;font-size:30px;font-weight:750;letter-spacing:-.045em;margin:0 0 9px}
+.auth-login-page .auth-intro p{color:#656a75;font-size:13px;line-height:1.55;margin:0 0 28px}
+.auth-google-button{width:100%;min-height:49px;display:flex;align-items:center;justify-content:center;gap:11px;position:relative;border:1px solid #101116;border-radius:9px;background:#101116;color:#fff;font-size:13px;font-weight:700;transition:background .15s,transform .15s}
+.auth-google-button:hover:not(:disabled){background:#30333a;transform:translateY(-1px)}
+.auth-google-button svg{position:absolute;right:15px}
+.auth-google-button:focus-visible,.auth-tabs button:focus-visible{outline:3px solid #517c9c;outline-offset:3px}
+.auth-login-page .auth-hint{margin:15px 0 0;color:#747780;font-size:11px;text-align:center;line-height:1.5}
+.auth-login-page .auth-foot{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:29px;padding-top:20px;border-top:1px solid #e7e8eb;color:#747780;font-size:11px}
+.auth-login-page .auth-error{margin-bottom:15px}
+@media(max-width:560px){.auth-login-page{align-items:center;padding:16px}.auth-login-page .login-card{padding:26px 22px 23px}.auth-login-page h1{font-size:27px}}
+
+.auth-login-page .auth-intro p{margin-bottom:22px}
+.auth-email-form{display:flex;flex-direction:column;gap:9px}
+.auth-email-form label{font-size:12px;font-weight:700;color:#242832}
+.auth-email-form input{width:100%;height:46px;padding:0 13px;border:1px solid #dce0e5;border-radius:9px;background:#fff;color:#101116;font-size:13px;outline:none;margin-bottom:8px}
+.auth-email-form input::placeholder{color:#a1a6b0}
+.auth-email-form input:focus{border-color:#4b688d;box-shadow:0 0 0 3px rgba(75,104,141,.14)}
+.auth-label-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.auth-text-button,.auth-back-button{padding:0;border:0;background:transparent;color:#315d82;font-size:11px;font-weight:700}
+.auth-text-button:hover,.auth-back-button:hover{text-decoration:underline}
+.auth-submit-button{width:100%;height:49px;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:5px;border:1px solid #101116;border-radius:9px;background:#101116;color:#fff;font-size:13px;font-weight:700}
+.auth-submit-button:hover:not(:disabled){background:#30333a}
+.auth-divider{display:flex;align-items:center;gap:13px;margin:21px 0;color:#8b9099;font-size:11px}
+.auth-divider::before,.auth-divider::after{content:"";height:1px;flex:1;background:#e4e6e9}
+.auth-login-page .auth-google-button{min-height:47px;border-color:#dce0e5;background:#fff;color:#161a21}
+.auth-login-page .auth-google-button:hover:not(:disabled){background:#f5f6f8}
+.auth-login-page .auth-foot{margin-top:25px}
+.auth-login-page .auth-notice{margin-bottom:15px;padding:11px 12px;border:1px solid #cce4d8;border-radius:9px;background:#eff8f3;color:#225943;font-size:12px;line-height:1.5}
+.auth-back-button{display:block;margin:17px auto 0}
+.auth-email-form input:focus-visible,.auth-submit-button:focus-visible,.auth-google-button:focus-visible,.auth-text-button:focus-visible,.auth-back-button:focus-visible{outline:3px solid #517c9c;outline-offset:3px}
