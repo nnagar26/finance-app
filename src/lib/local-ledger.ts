@@ -49,7 +49,7 @@ function item(name: string, kind?: string): ReferenceItem {
 function newLedger(): Ledger {
   return {
     schema_version: 2,
-    settings: { currency_code: 'CAD', time_zone: 'America/Toronto', theme: 'system' },
+    settings: { currency_code: 'CAD', time_zone: 'America/Toronto', theme: 'light' },
     categories: [item('Salary', 'income'), item('Other Income', 'income'),
       ...['Groceries', 'Dining', 'Rent', 'Utilities', 'Mortgage', 'Gas', 'Car Maintenance',
         'Car Insurance', 'Car loan', 'Internet (WiFi)', 'Phone', 'Household Supplies',

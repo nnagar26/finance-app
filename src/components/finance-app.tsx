@@ -4,12 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownLeft, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Download, LayoutDashboard, ListFilter, Menu, Moon, MoreHorizontal, Plus, Repeat2, Search, Settings2, Sun, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Download, LayoutDashboard, ListFilter, LogOut, Menu, Moon, MoreHorizontal, Plus, Repeat2, Search, Settings2, Sun, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
 import { formatMoney, localDate, totals } from '@/lib/finance';
 import type { Meta, Transaction, RecurringRule } from '@/lib/types';
 import { SUPPORTED_CURRENCIES } from '@/lib/exchange-rates';
 import TransactionModal from './transaction-modal';
 import RecurringModal from './recurring-modal';
+import { browserSupabase } from '@/lib/supabase-browser';
 
 type Overview = { summary: ReturnType<typeof totals>; months: (ReturnType<typeof totals> & { month: number; key: string })[]; categories: { id: string; amount: number }[]; methods: { id: string; amount: number }[]; recent: Transaction[] };
 type TransactionResult = { rows: Transaction[]; total: number; page: number; tagLinks: { transaction_id: string; tag_id: string }[] };
@@ -46,9 +47,11 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const [busy, setBusy] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [profileName, setProfileName] = useState('');
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const currency = meta?.settings.currency_code ?? 'CAD';
   const themePreference = meta?.settings.theme;
+  const accountName = profileName || (localMode ? 'Local workspace' : email.split('@')[0]);
   const money = useCallback((v: number) => formatMoney(v, currency), [currency]);
   const nameOf = useCallback((entity: keyof Pick<Meta, 'categories'|'accounts'|'payment_methods'|'tags'>, id: string | null) => meta?.[entity].find(x => x.id === id)?.name ?? 'Uncategorized', [meta]);
 
@@ -82,6 +85,15 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
     return () => media.removeEventListener('change', apply);
   }, [themePreference]);
   useEffect(() => {
+    if (localMode) return;
+    let live = true;
+    browserSupabase().auth.getUser().then(({ data: { user } }) => {
+      const savedName = user?.user_metadata?.full_name ?? user?.user_metadata?.name;
+      if (live && typeof savedName === 'string' && savedName.trim()) setProfileName(savedName.trim());
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [localMode]);
+  useEffect(() => {
     const media = window.matchMedia('(max-width: 780px)');
     const updateViewport = () => {
       setIsMobileViewport(media.matches);
@@ -106,6 +118,23 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
       setRevision(x => x + 1); return data.result;
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to save.'); throw e; }
     finally { setBusy(false); }
+  }
+  async function saveProfileName(nextName: string) {
+    const value = nextName.trim();
+    if (!value) throw new Error('Enter a display name.');
+    const { error: updateError } = await browserSupabase().auth.updateUser({ data: { full_name: value } });
+    if (updateError) throw updateError;
+    setProfileName(value);
+  }
+  async function signOut() {
+    setBusy(true); setError('');
+    try {
+      const { error: signOutError } = await browserSupabase().auth.signOut();
+      if (signOutError) throw signOutError;
+      router.replace('/login'); router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to sign out.');
+    } finally { setBusy(false); }
   }
   const refresh = async () => { setRevision(x => x + 1); };
   function openAdd() {
@@ -149,7 +178,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
     <aside className={`sidebar ${mobileMenu ? 'sidebar-open' : ''}`} aria-hidden={isMobileViewport && !mobileMenu ? true : undefined} inert={isMobileViewport && !mobileMenu ? true : undefined}>
       <div className="brand"><div className="brand-mark">M</div><div><strong>myfinance<span>.</span></strong><small>PERSONAL FINANCE</small></div><button className="mobile-close icon-button" onClick={closeMobileMenu} aria-label="Close menu"><X size={20}/></button></div>
       <div className="nav-label">WORKSPACE</div><nav className="side-nav">{links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={closeMobileMenu} className={section === href.slice(1) ? 'nav-link active' : 'nav-link'}><Icon size={19} strokeWidth={1.9}/><span>{label}</span>{label === 'Recurring' && dueCount > 0 && <em>{dueCount}</em>}</Link>)}</nav>
-      <div className="sidebar-bottom"><div className="privacy-card"><div className="privacy-icon"><Wallet size={18}/></div><strong>Your money, clearly.</strong><span>A calmer way to see your financial life.</span></div><div className="account-chip"><div className="avatar">{email.slice(0,1).toUpperCase()}</div><div><strong>{localMode ? 'Local workspace' : 'Personal account'}</strong><small>{email}</small></div></div></div>
+      <div className="sidebar-bottom"><div className="privacy-card"><div className="privacy-icon"><Wallet size={18}/></div><strong>Your money, clearly.</strong><span>A calmer way to see your financial life.</span></div><button type="button" className="account-chip account-button" onClick={() => router.push('/settings')}><div className="avatar">{accountName.slice(0,1).toUpperCase()}</div><div><strong>{accountName}</strong><small>{localMode ? 'Local workspace' : email}</small></div><Settings2 size={15}/></button></div>
     </aside>
     <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" ref={menuButtonRef} onClick={openMobileMenu} aria-label="Open menu" aria-expanded={mobileMenu}><Menu size={22}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select><button className="button primary add-top" onClick={openAdd}><Plus size={18}/> Add transaction</button></div></header>
       <main className="content">
@@ -191,7 +220,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
           {dueCount > 0 && <div className="panel due-panel"><PanelHead title="Ready for review" subtitle="Post or skip each due item. Only posted items affect your totals."/>{meta.recurring_rules.filter(r => r.active && r.next_due_on <= localDate(new Date(), meta.settings.time_zone)).map(r => <div className="rule-row" key={r.id}><div className="rule-icon"><Repeat2 size={19}/></div><div className="rule-main"><strong>{r.name}</strong><span>Due {r.next_due_on} · {r.frequency}</span></div><strong>{formatMoney(r.amount_minor, r.currency_code)}</strong><div className="rule-actions"><button className="button small ghost" disabled={busy} onClick={() => mutate({ action: 'recurring.review', id: r.id, choice: 'skip' })}>Skip</button><button className="button small primary" disabled={busy} onClick={() => mutate({ action: 'recurring.review', id: r.id, choice: 'post' })}>Post</button></div></div>)}</div>}
           <div className="panel"><PanelHead title="Your recurring items" subtitle="Review the next due date and amount before posting"/>{meta.recurring_rules.length ? meta.recurring_rules.map(r => <div className="rule-row" key={r.id}><div className="rule-icon"><Repeat2 size={19}/></div><div className="rule-main"><strong>{r.name}</strong><span>{r.frequency} · Next {r.next_due_on} · {r.active ? 'Active' : 'Paused'}</span></div><strong>{formatMoney(r.amount_minor, r.currency_code)}</strong><div className="rule-actions"><button className="button small ghost" onClick={() => setEditingRule(r)}>Edit</button><button className="button small ghost" disabled={busy} onClick={() => mutate({ action: 'recurring.archive', id: r.id, active: !r.active })}>{r.active ? 'Pause' : 'Resume'}</button></div></div>) : <Empty title="Nothing recurring yet" description="Add rent, salary, subscriptions, or any routine payment."/>}</div>
         </>}
-        {section === 'settings' && meta && <SettingsPage meta={meta} email={email} localMode={localMode} money={money} mutate={mutate} busy={busy}/>}
+        {section === 'settings' && meta && <SettingsPage meta={meta} email={email} localMode={localMode} money={money} mutate={mutate} busy={busy} profileName={accountName} onSaveProfileName={saveProfileName} onSignOut={signOut}/>}
       </main>
     </div>
     <nav className="bottom-nav">{links.slice(0,5).map(({ href,label,icon:Icon }) => <Link href={href} key={href} className={section === href.slice(1) ? 'active' : ''}><Icon size={20}/><span>{label}</span></Link>)}</nav>
@@ -226,12 +255,20 @@ function Breakdown({ rows, name, money }: { rows: { id:string; amount:number }[]
 function TransactionList({ rows, nameOf, money, compact, onEdit, onDelete }: { rows:Transaction[]; nameOf:(entity:'categories'|'accounts'|'payment_methods'|'tags',id:string|null)=>string; money:(v:number)=>string; compact?:boolean; onEdit:(t:Transaction)=>void; onDelete?:(t:Transaction)=>void }) { return rows.length ? <div className={compact ? 'transaction-list compact' : 'transaction-list'}>{rows.map(t => { const incoming = t.type === 'income' || t.type === 'other' && t.other_effect === 'income'; const neutral = t.type === 'other' && t.other_effect === 'neutral'; const reporting = t.reporting_amount_minor ?? t.amount_minor; const converted = t.reporting_currency_code && t.reporting_currency_code !== t.currency_code; return <div className="transaction-row" key={t.id}><div className={`transaction-icon ${incoming ? 'incoming' : neutral ? 'neutral' : 'outgoing'}`}>{incoming ? <ArrowDownLeft size={18}/> : neutral ? <MoreHorizontal size={18}/> : <ArrowUpRight size={18}/>}</div><div className="transaction-main"><strong>{t.description || nameOf('categories',t.category_id)}</strong><span>{nameOf('categories',t.category_id)} · {t.transaction_date}{!compact && t.payment_method_id ? ` · ${nameOf('payment_methods',t.payment_method_id)}` : ''}</span></div><div className="transaction-amount"><strong className={incoming ? 'positive' : neutral ? '' : 'negative'}>{neutral ? '' : incoming ? '+' : '-'}{money(reporting)}</strong>{converted && <span>{formatMoney(t.amount_minor, t.currency_code)} original</span>}{!compact && <span>{t.type}</span>}</div><div className="row-buttons"><button className="icon-button" aria-label="Edit transaction" onClick={() => onEdit(t)}><MoreHorizontal size={18}/></button>{onDelete && <button className="icon-button danger" aria-label="Delete transaction" onClick={() => onDelete(t)}><Trash2 size={16}/></button>}</div></div>; })}</div> : <Empty title="No transactions found" description="Add one to get started, or adjust your filters."/>; }
 function calendarCells(year: number, month: number) { const first = new Date(Date.UTC(year,month-1,1)); const offset = (first.getUTCDay()+6)%7; const days = new Date(Date.UTC(year,month,0)).getUTCDate(); const cells:(string|null)[] = Array(offset).fill(null); for(let d=1;d<=days;d++) cells.push(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`); while(cells.length%7) cells.push(null); return cells; }
 
-function SettingsPage({ meta, email, localMode, mutate, busy }: { meta:Meta; email:string; localMode:boolean; money:(v:number)=>string; mutate:(payload:Record<string,unknown>)=>Promise<unknown>; busy:boolean }) {
-  const router = useRouter();
+function SettingsPage({ meta, email, localMode, mutate, busy, profileName, onSaveProfileName, onSignOut }: { meta:Meta; email:string; localMode:boolean; money:(v:number)=>string; mutate:(payload:Record<string,unknown>)=>Promise<unknown>; busy:boolean; profileName:string; onSaveProfileName:(name:string)=>Promise<void>; onSignOut:()=>Promise<void> }) {
   const [tab, setTab] = useState<'categories'|'accounts'|'payment_methods'|'tags'>('categories');
   const [name, setName] = useState(''); const [kind, setKind] = useState('expense');
   const [editingRef, setEditingRef] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState(profileName);
+  const [profileError, setProfileError] = useState('');
+  const [profileSaved, setProfileSaved] = useState('');
+  useEffect(() => setDisplayName(profileName), [profileName]);
   async function saveRef(e: React.FormEvent) { e.preventDefault(); try { await mutate({ action: 'reference.save', entity: tab, id: editingRef, name, kind }); setName(''); setEditingRef(null); } catch {} }
+  async function saveProfile(e: React.FormEvent) {
+    e.preventDefault(); setProfileError(''); setProfileSaved('');
+    try { await onSaveProfileName(displayName); setProfileSaved('Profile name saved.'); }
+    catch (e) { setProfileError(e instanceof Error ? e.message : 'Unable to save your profile name.'); }
+  }
   async function deleteRef(referenceId: string, referenceName: string) {
     if (!confirm(`Permanently delete “${referenceName}”?`)) return;
     try { await mutate({ action: 'reference.delete', entity: tab, id: referenceId }); }
@@ -239,7 +276,7 @@ function SettingsPage({ meta, email, localMode, mutate, busy }: { meta:Meta; ema
   }
   const rows = meta[tab];
   return <><PageHeading eyebrow="PREFERENCES" title="Settings" description="Make this workspace yours."/>
-    <div className="settings-grid"><div className="panel"><PanelHead title="Appearance" subtitle="Choose the look that feels right"/><div className="theme-options">{(['light','dark','system'] as const).map(x => <button key={x} className={meta.settings.theme === x ? 'theme-choice active' : 'theme-choice'} onClick={() => mutate({ action: 'settings.save', values: { theme: x } })}>{x === 'dark' ? <Moon size={18}/> : <Sun size={18}/>} {x[0].toUpperCase()+x.slice(1)}</button>)}</div><div className="setting-line"><div><strong>Time zone</strong><span>Used for today and recurring due dates</span></div><span>{meta.settings.time_zone}</span></div><div className="setting-line"><div><strong>{localMode ? 'Storage' : 'Signed in as'}</strong><span>{localMode ? 'Private file in this project' : 'Owner-only workspace'}</span></div><span>{localMode ? 'This laptop' : email}</span></div>{!localMode && <button className="text-button left" onClick={async () => { const { browserSupabase } = await import('@/lib/supabase-browser'); await browserSupabase().auth.signOut(); router.replace('/login'); router.refresh(); }}>Sign out</button>}</div>
+    <div className="settings-grid">{!localMode && <div className="panel"><PanelHead title="Profile & account" subtitle="Choose how your account appears in My Finance"/><form className="profile-form" onSubmit={saveProfile}><label className="field"><span>Profile name</span><input value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={80} required/></label><div className="setting-line"><div><strong>Email</strong><span>Your sign-in email</span></div><span>{email}</span></div>{profileError && <div className="profile-message error" role="alert">{profileError}</div>}{profileSaved && <div className="profile-message" role="status">{profileSaved}</div>}<div className="profile-actions"><button className="button secondary" disabled={busy}>Save name</button><button type="button" className="text-button danger-text" disabled={busy} onClick={onSignOut}><LogOut size={15}/> Sign out</button></div></form></div>}<div className="panel"><PanelHead title="Appearance" subtitle="Choose the look that feels right"/><div className="theme-options">{(['light','dark','system'] as const).map(x => <button key={x} className={meta.settings.theme === x ? 'theme-choice active' : 'theme-choice'} onClick={() => mutate({ action: 'settings.save', values: { theme: x } })}>{x === 'dark' ? <Moon size={18}/> : <Sun size={18}/>} {x[0].toUpperCase()+x.slice(1)}</button>)}</div><div className="setting-line"><div><strong>Time zone</strong><span>Used for today and recurring due dates</span></div><span>{meta.settings.time_zone}</span></div><div className="setting-line"><div><strong>{localMode ? 'Storage' : 'Theme setting'}</strong><span>{localMode ? 'Private file in this project' : 'Saved to your private account'}</span></div><span>{localMode ? 'This laptop' : 'All your devices'}</span></div></div>
       <div className="panel"><PanelHead title="Reporting currency" subtitle="Choose it from the top bar"/><div className="currency-current"><span>Current reporting currency</span><strong>{meta.settings.currency_code}</strong></div><p className="muted small-text">Transactions keep their original amount and currency. Dashboard and report values use cached reference rates from each transaction date.</p></div></div>
     <div className="panel manage-panel"><PanelHead title="Manage your lists" subtitle="Keep categories, accounts, methods, and tags organized"/><div className="tab-row">{(['categories','accounts','payment_methods','tags'] as const).map(x => <button className={tab === x ? 'active' : ''} onClick={() => { setTab(x); setKind(x === 'accounts' ? 'other' : 'expense'); setName(''); setEditingRef(null); }} key={x}>{x === 'payment_methods' ? 'Payment methods' : x[0].toUpperCase()+x.slice(1)}</button>)}</div><form className="add-reference" onSubmit={saveRef}><input value={name} onChange={e => setName(e.target.value)} placeholder={`${editingRef ? 'Rename' : 'New'} ${tab === 'payment_methods' ? 'payment method' : tab.slice(0,-1)}`} required/>{tab === 'categories' && <select value={kind} onChange={e => setKind(e.target.value)}><option value="expense">Expense</option><option value="income">Income</option><option value="both">Both</option></select>}{tab === 'accounts' && <select value={kind} onChange={e => setKind(e.target.value)}><option value="other">Other</option><option value="cash">Cash</option><option value="bank">Bank</option><option value="card">Card</option></select>}<button className="button primary" disabled={busy}><Plus size={16}/> {editingRef ? 'Save' : 'Add'}</button>{editingRef && <button type="button" className="button ghost" onClick={() => { setEditingRef(null); setName(''); }}>Cancel</button>}</form><div className="reference-list">{rows.map(x => <div className="reference-row" key={x.id}><span>{x.name}{x.kind && <em>{x.kind}</em>}{Boolean(x.usage_count) && <em>{x.usage_count} in use</em>}</span><div><button className="text-button" onClick={() => { setEditingRef(x.id); setName(x.name); setKind(x.kind ?? 'expense'); }}>Edit</button><button className="text-button" disabled={busy} onClick={() => mutate({ action: 'reference.archive', entity: tab, id: x.id, active: !x.active })}>{x.active ? 'Archive' : 'Restore'}</button><button className="text-button danger-text" disabled={busy || Boolean(x.usage_count)} title={x.usage_count ? `Used by ${x.usage_count} records—archive instead` : 'Permanently delete'} onClick={() => deleteRef(x.id, x.name)}>Delete</button></div></div>)}</div></div>
     <div className="panel export-panel"><div><PanelHead title="Your data, yours to keep" subtitle="Download all transactions in a spreadsheet-friendly CSV file"/></div><Link href="/api/export" className="button secondary"><Download size={17}/> Export CSV</Link></div>

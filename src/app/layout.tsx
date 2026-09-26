@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 const themeBootstrap = `
 try {
-  const preference = localStorage.getItem('finance-theme') || 'system';
+  const preference = localStorage.getItem('finance-theme') || 'light';
   const effective = preference === 'system'
     ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     : preference;
