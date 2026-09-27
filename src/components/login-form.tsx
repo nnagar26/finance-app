@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, LockKeyhole } from 'lucide-react';
+import { ArrowRight, ChartNoAxesCombined, ListPlus, LockKeyhole } from 'lucide-react';
 import Image from 'next/image';
 import { browserSupabase } from '@/lib/supabase-browser';
 import styles from './login-form.module.css';
@@ -90,18 +90,28 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
   }
 
   return <main className={`auth-page auth-login-page ${styles.page}`}>
-    <section className={styles.introduction} aria-labelledby="finance-intro-title">
-      <div className={styles.introCopy}>
-        <span className={styles.kicker}>A clearer view of your money</span>
-        <h2 id="finance-intro-title">Know where your money goes.</h2>
-        <p>Track income and expenses, see monthly trends, and keep your finances in one private place.</p>
-        <p className={styles.howItWorks}><strong>How it works</strong> Add a transaction and My Finance brings it into your dashboard and reports.</p>
-      </div>
-      <div className={styles.illustration}>
-        <Image src="/images/finance-intro.jpg" alt="" fill priority sizes="(max-width: 760px) 100vw, 55vw" className={styles.image} />
-        <span className={styles.imageTitle}>My Finance App</span>
-      </div>
-    </section>
+    <div className={styles.shell}>
+      <section className={styles.introduction} aria-labelledby="finance-intro-title">
+        <div className={styles.introCopy}>
+          <span className={styles.kicker}>MY FINANCE APP</span>
+          <h2 id="finance-intro-title">Know where your money goes.</h2>
+          <p>One clear place to track your money and understand your monthly spending.</p>
+        </div>
+        <div className={styles.features} aria-label="How My Finance works">
+          <div className={styles.feature}>
+            <span className={styles.featureIcon}><ListPlus size={19} aria-hidden="true" /></span>
+            <p><strong>Add transactions</strong><span>Record income and expenses as they happen.</span></p>
+          </div>
+          <div className={styles.feature}>
+            <span className={styles.featureIcon}><ChartNoAxesCombined size={19} aria-hidden="true" /></span>
+            <p><strong>See the picture</strong><span>View your dashboard and reports by month.</span></p>
+          </div>
+        </div>
+        <div className={styles.illustration}>
+          <Image src="/images/finance-login-cards.jpg" alt="" fill priority sizes="(max-width: 850px) 100vw, 50vw" className={styles.image} />
+          <span className={styles.imageTitle}>My Finance App</span>
+        </div>
+      </section>
     <section className="auth-card login-card" aria-labelledby="auth-title">
       <div className="auth-brand"><div className="brand-mark" aria-hidden="true">M</div><span>MY FINANCE</span></div>
       <div className="auth-tabs" role="group" aria-label="Account access">
@@ -131,6 +141,7 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
         <p className="auth-hint">{mode === 'login' ? 'Your ledger is saved securely to your account.' : 'Your new account gets its own empty ledger.'}</p>
       </>}
       <div className="auth-foot"><LockKeyhole size={15} aria-hidden="true" /><span>Only you can see your finance data.</span></div>
-    </section>
+      </section>
+    </div>
   </main>;
 }
