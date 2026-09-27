@@ -50,7 +50,7 @@ export default function TransactionModal({ meta, transaction, tagIds = [], onClo
       const res = await fetch('/api/mutate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'transaction.save', id: transaction?.id, values: {
           transaction_date: date, amount_minor, currency_code: currency, type, other_effect: type === 'other' ? effect : null,
-          category_id: category || null, payment_method_id: method || null, account_id: account || null,
+          category_id: type === 'income' ? null : category || null, payment_method_id: type === 'income' ? null : method || null, account_id: type === 'expense' ? null : account || null,
           description, notes, tag_ids: tags,
         } }), });
       const json = await res.json(); if (!res.ok) throw new Error(json.error);
@@ -59,22 +59,22 @@ export default function TransactionModal({ meta, transaction, tagIds = [], onClo
     finally { setBusy(false); }
   }
   const categoryKind = type === 'income' || type === 'other' && effect === 'income' ? 'income' : 'expense';
-  const categories = meta.categories.filter(c => c.active || c.id === category).filter(c => c.kind === 'both' || c.kind === categoryKind);
+  const categories = meta.categories.filter(c => c.active || c.id === category).filter(c => type === 'other' ? c.kind === 'both' || c.kind === categoryKind : true);
   return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className="modal" ref={dialogRef} role="dialog" aria-modal="true" aria-label={transaction ? 'Edit transaction' : 'Add transaction'}>
     <div className="modal-head"><div><div className="eyebrow">YOUR LEDGER</div><h2>{transaction ? 'Edit transaction' : 'Add transaction'}</h2></div><button className="icon-button" aria-label="Close" onClick={onClose}><X size={20} /></button></div>
     <form onSubmit={save} className="stack gap-md">
-      <div className="type-pills">{(['expense','income','other'] as TransactionType[]).map(v => <button type="button" className={`pill ${v} ${type === v ? 'selected' : ''}`} key={v} onClick={() => { setType(v); setCategory(''); if (v === 'other') setEffect('neutral'); }}>{v[0].toUpperCase() + v.slice(1)}</button>)}</div>
+      <div className="type-pills">{(['expense','income'] as TransactionType[]).map(v => <button type="button" className={`pill ${v} ${type === v ? 'selected' : ''}`} key={v} onClick={() => { setType(v); setCategory(''); }}>{v[0].toUpperCase() + v.slice(1)}</button>)}{type === 'other' && <span className="pill other selected">Other (legacy)</span>}</div>
       <div className="form-grid"><label className="field"><span>Amount</span><input type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} required autoFocus /></label>
         <label className="field"><span>Currency</span><select value={currency} onChange={e => setCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></label></div>
       <label className="field"><span>Date</span><input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label>
       {type === 'other' && <label className="field"><span>How does this affect totals?</span><select value={effect} onChange={e => { setEffect(e.target.value as FinancialEffect); setCategory(''); }}><option value="expense">Expense</option><option value="income">Income</option><option value="neutral">Neutral</option></select></label>}
-      <label className="field"><span>Description</span><input value={description} onChange={e => setDescription(e.target.value)} placeholder="What was this for?" maxLength={300} /></label>
-      <div className="form-grid"><label className="field"><span>Category</span><select value={category} onChange={e => setCategory(e.target.value)}><option value="">Uncategorized</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
-        <label className="field"><span>Payment method</span><select value={method} onChange={e => setMethod(e.target.value)}><option value="">Not specified</option>{meta.payment_methods.filter(x => x.active || x.id === method).map(x => <option value={x.id} key={x.id}>{x.name}</option>)}</select></label></div>
-      <label className="field"><span>Account / card</span><select value={account} onChange={e => setAccount(e.target.value)}><option value="">Not specified</option>{meta.accounts.filter(x => x.active || x.id === account).map(x => <option value={x.id} key={x.id}>{x.name}</option>)}</select></label>
+      {(type === 'expense' || type === 'other') && <><div className="form-grid"><label className="field"><span>Category</span><select value={category} onChange={e => setCategory(e.target.value)}><option value="">Uncategorized</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
+        <label className="field"><span>Payment method</span><select value={method} onChange={e => setMethod(e.target.value)}><option value="">Not specified</option>{meta.payment_methods.filter(x => x.active || x.id === method).map(x => <option value={x.id} key={x.id}>{x.name}</option>)}</select></label></div></>}
+      {(type === 'income' || type === 'other') && <label className="field"><span>{type === 'income' ? 'Account' : 'Account / card'}</span><select value={account} onChange={e => setAccount(e.target.value)}><option value="">Not specified</option>{meta.accounts.filter(x => x.active || x.id === account).map(x => <option value={x.id} key={x.id}>{x.name}</option>)}</select></label>}
       <button type="button" className="text-button left" onClick={() => setMore(!more)}>{more ? 'Hide notes and tags' : '+ Add notes or tags'}</button>
       {more && <><label className="field"><span>Notes</span><textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} maxLength={2000} placeholder="Anything else to remember" /></label>
         <div className="field"><span>Tags</span><div className="tag-options">{meta.tags.filter(t => t.active || tags.includes(t.id)).map(t => <label className="tag-option" key={t.id}><input type="checkbox" checked={tags.includes(t.id)} onChange={e => setTags(e.target.checked ? [...tags, t.id] : tags.filter(x => x !== t.id))} />{t.name}</label>)}</div></div></>}
+      <label className="field"><span>Description</span><input value={description} onChange={e => setDescription(e.target.value)} placeholder="What was this for?" maxLength={300} /></label>
       {error && <div className="error-box" role="alert">{error}</div>}
       <div className="modal-actions"><button type="button" className="button ghost" onClick={onClose}>Cancel</button><button className="button primary" disabled={busy}>{busy ? 'Saving…' : transaction ? 'Save changes' : 'Add transaction'}</button></div>
     </form>
