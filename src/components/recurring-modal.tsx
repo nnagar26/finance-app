@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { localDate, parseMoneyInput } from '@/lib/finance';
 import type { Meta, RecurringRule, TransactionType, FinancialEffect, Frequency } from '@/lib/types';
 import { SUPPORTED_CURRENCIES } from '@/lib/exchange-rates';
 
 export default function RecurringModal({ meta, rule, onClose, onSaved }: { meta: Meta; rule?: RecurringRule | null; onClose: () => void; onSaved: () => Promise<void> }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
   const [name, setName] = useState(rule?.name ?? ''); const [amount, setAmount] = useState(rule ? (rule.amount_minor / 100).toFixed(2) : '');
   const [currency, setCurrency] = useState(rule?.currency_code ?? meta.settings.currency_code);
   const [type, setType] = useState<TransactionType>(rule?.type ?? 'expense');
@@ -16,6 +18,24 @@ export default function RecurringModal({ meta, rule, onClose, onSaved }: { meta:
   const [frequency, setFrequency] = useState<Frequency>(rule?.frequency ?? 'monthly');
   const [due, setDue] = useState(rule?.next_due_on ?? localDate(new Date(), meta.settings.time_zone));
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = () => [...(dialogRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])]
+      .filter(element => !element.hasAttribute('hidden'));
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { closeRef.current(); return; }
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      if (!elements.length) { event.preventDefault(); return; }
+      const first = elements[0]; const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    dialogRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+    window.addEventListener('keydown', handler);
+    return () => { window.removeEventListener('keydown', handler); previousFocus?.focus(); };
+  }, []);
   async function save(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError('');
     try {
@@ -29,7 +49,7 @@ export default function RecurringModal({ meta, rule, onClose, onSaved }: { meta:
     finally { setBusy(false); }
   }
   const categoryKind = type === 'income' || type === 'other' && effect === 'income' ? 'income' : 'expense';
-  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-label="Recurring transaction">
+  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className="modal" ref={dialogRef} role="dialog" aria-modal="true" aria-label="Recurring transaction">
     <div className="modal-head"><div><div className="eyebrow">AUTOMATE THE ROUTINE</div><h2>{rule ? 'Edit recurring item' : 'New recurring item'}</h2></div><button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></div>
     <form onSubmit={save} className="stack gap-md">
       <label className="field"><span>Name</span><input value={name} onChange={e => setName(e.target.value)} required placeholder="Rent, salary, internet…" /></label>

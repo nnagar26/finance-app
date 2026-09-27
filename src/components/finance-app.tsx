@@ -23,12 +23,12 @@ type TransactionResult = { rows: Transaction[]; total: number; page: number; tag
 type CalendarResult = { rows: Transaction[]; dayRows: Transaction[]; dayTotals: ReturnType<typeof totals>; weekTotals: ReturnType<typeof totals>; monthTotals: ReturnType<typeof totals>; today?: string };
 
 const links = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Transactions', icon: CreditCard },
-  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/reports', label: 'Reports', icon: TrendingUp },
-  { href: '/recurring', label: 'Recurring', icon: Repeat2 },
-  { href: '/settings', label: 'Settings', icon: Settings2 },
+  { href: '/dashboard', label: 'Dashboard', mobileLabel: 'Home', icon: LayoutDashboard },
+  { href: '/transactions', label: 'Transactions', mobileLabel: 'Activity', icon: CreditCard },
+  { href: '/calendar', label: 'Calendar', mobileLabel: 'Calendar', icon: CalendarDays },
+  { href: '/reports', label: 'Reports', mobileLabel: 'Reports', icon: TrendingUp },
+  { href: '/recurring', label: 'Recurring', mobileLabel: 'Recurring', icon: Repeat2 },
+  { href: '/settings', label: 'Settings', mobileLabel: 'Settings', icon: Settings2 },
 ];
 const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const fetchJson = async <T,>(url: string): Promise<T> => { const response = await fetch(url, { cache: 'no-store' }); const json = await response.json(); if (!response.ok) throw new Error(json.error || 'Unable to load data.'); return json as T; };
@@ -137,6 +137,14 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
     return () => media.removeEventListener('change', updateViewport);
   }, []);
   useEffect(() => {
+    if (!mobileMenu) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeMobileMenu();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileMenu]);
+  useEffect(() => {
     if (section !== 'dashboard') return;
     const updateGreeting = () => setGreeting(greetingFor(new Date(), meta?.settings.time_zone ?? 'America/Toronto'));
     updateGreeting();
@@ -234,12 +242,13 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const dueCount = meta?.recurring_rules.filter(r => r.active && r.next_due_on <= localDate(new Date(), meta.settings.time_zone)).length ?? 0;
 
   return <div className="app-shell">
+    {mobileMenu && <button type="button" className="sidebar-backdrop" aria-label="Close menu" onClick={closeMobileMenu}/>}
     <aside className={`sidebar ${mobileMenu ? 'sidebar-open' : ''}`} aria-hidden={isMobileViewport && !mobileMenu ? true : undefined} inert={isMobileViewport && !mobileMenu ? true : undefined}>
       <div className="brand"><div className="brand-mark">M</div><div><strong>myfinance<span>.</span></strong><small>PERSONAL FINANCE</small></div><button className="mobile-close icon-button" onClick={closeMobileMenu} aria-label="Close menu"><X size={20}/></button></div>
       <div className="nav-label">WORKSPACE</div><nav className="side-nav">{links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={closeMobileMenu} className={section === href.slice(1) ? 'nav-link active' : 'nav-link'}><Icon size={19} strokeWidth={1.9}/><span>{label}</span>{label === 'Recurring' && dueCount > 0 && <em>{dueCount}</em>}</Link>)}</nav>
-      <div className="sidebar-bottom"><div className="privacy-card"><div className="privacy-icon"><Wallet size={18}/></div><strong>Your money, clearly.</strong><span>A calmer way to see your financial life.</span></div><button type="button" className="account-chip account-button" onClick={() => router.push('/settings')}><div className="avatar">{accountName.slice(0,1).toUpperCase()}</div><div><strong>{accountName}</strong><small>{localMode ? 'Local workspace' : email}</small></div><Settings2 size={15}/></button></div>
+      <div className="sidebar-bottom"><div className="privacy-card"><div className="privacy-icon"><Wallet size={18}/></div><strong>Your money, clearly.</strong><span>A calmer way to see your financial life.</span></div><button type="button" className="account-chip account-button" onClick={() => { if (mobileMenu) closeMobileMenu(); router.push('/settings'); }}><div className="avatar">{accountName.slice(0,1).toUpperCase()}</div><div><strong>{accountName}</strong><small>{localMode ? 'Local workspace' : email}</small></div><Settings2 size={15}/></button></div>
     </aside>
-    <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" ref={menuButtonRef} onClick={openMobileMenu} aria-label="Open menu" aria-expanded={mobileMenu}><Menu size={22}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><div className="theme-toggle" role="group" aria-label="Color theme"><button type="button" className={activeTheme === 'light' ? 'active' : ''} aria-label="Use light theme" aria-pressed={activeTheme === 'light'} title="Light theme" disabled={busy || !meta} onClick={() => changeTheme('light')}><Sun size={16}/></button><button type="button" className={activeTheme === 'dark' ? 'active' : ''} aria-label="Use dark theme" aria-pressed={activeTheme === 'dark'} title="Dark theme" disabled={busy || !meta} onClick={() => changeTheme('dark')}><Moon size={16}/></button></div><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></div></header>
+    <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" ref={menuButtonRef} onClick={openMobileMenu} aria-label="Open menu" aria-expanded={mobileMenu}><Menu size={22}/></button><div className="breadcrumb"><span>Workspace</span><ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><div className="theme-toggle" role="group" aria-label="Color theme"><button type="button" className={activeTheme === 'light' ? 'active' : ''} aria-label="Use light theme" aria-pressed={activeTheme === 'light'} title="Light theme" disabled={busy || !meta} onClick={() => changeTheme('light')}><Sun size={16}/></button><button type="button" className={activeTheme === 'dark' ? 'active' : ''} aria-label="Use dark theme" aria-pressed={activeTheme === 'dark'} title="Dark theme" disabled={busy || !meta} onClick={() => changeTheme('dark')}><Moon size={16}/></button></div><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select><button type="button" className="mobile-add" aria-label="Add transaction" disabled={!meta} onClick={openAdd}><Plus size={24}/></button></div></header>
       <main className="content">
         {localMode && <div className="notice">Local mode · Data is saved in this project’s .local-data folder on this laptop.</div>}
         {error && <div className="error-box page-error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
@@ -277,7 +286,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
             const hasExpenses = dayTotals.expenses > 0;
             return <button key={i} type="button" className={`calendar-cell ${isSelected ? 'selected' : ''} ${isToday ? 'is-today' : ''}`} onClick={() => setSelectedDay(day)}>
               <div className="calendar-cell-top">
-                <span className="calendar-day-num">{Number(day.slice(-2))}</span>
+                <span className="calendar-day-num">{Number(day.slice(-2))}</span><span className="calendar-weekday-mobile">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(`${day}T12:00:00Z`).getUTCDay()]}</span>
                 {isToday && <span className="today-badge">Today</span>}
               </div>
               {(hasIncome || hasExpenses) && <div className="calendar-cell-values">
@@ -305,8 +314,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
         {section === 'settings' && meta && <SettingsPage meta={meta} email={email} localMode={localMode} money={money} mutate={mutate} busy={busy} profileName={accountName} onSaveProfileName={saveProfileName} onSignOut={signOut}/>}
       </main>
     </div>
-    <nav className="bottom-nav">{links.slice(0,5).map(({ href,label,icon:Icon }) => <Link href={href} key={href} className={section === href.slice(1) ? 'active' : ''}><Icon size={20}/><span>{label}</span></Link>)}</nav>
-    <button type="button" className="mobile-add" aria-label="Add transaction" disabled={!meta} onClick={openAdd}><Plus size={25}/></button>
+    <nav className="bottom-nav" aria-label="Mobile navigation">{links.map(({ href,label,mobileLabel,icon:Icon }) => <Link href={href} key={href} aria-label={label} aria-current={section === href.slice(1) ? 'page' : undefined} className={section === href.slice(1) ? 'active' : ''}><Icon size={22}/><span>{mobileLabel}</span></Link>)}</nav>
     {meta && editing !== undefined && <TransactionModal meta={meta} transaction={editing} tagIds={editingTagIds} onClose={() => setEditing(undefined)} onSaved={refresh}/>}
     {meta && editingRule !== undefined && <RecurringModal meta={meta} rule={editingRule} onClose={() => setEditingRule(undefined)} onSaved={refresh}/>}
   </div>;
