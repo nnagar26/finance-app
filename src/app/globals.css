@@ -84,3 +84,10 @@ html[data-theme=dark] .auth-login-page{background:#eef0f2;color:#06070a}
 .reference-label>svg{flex-shrink:0;color:var(--muted)}
 .reference-label>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dashboard-greeting{margin-bottom:8px;color:var(--accent);font-size:13px;font-weight:700}
+.mobile-add{display:grid;position:fixed;right:max(24px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:54px;height:54px;border:0;border-radius:16px;background:#24564c;color:#fff;place-items:center;box-shadow:0 7px 22px rgba(30,77,69,.25);z-index:26;transition:transform .15s,background .15s}
+.mobile-add:hover:not(:disabled){transform:translateY(-2px);background:#1b453d}
+.mobile-add:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.content{padding-bottom:110px}
+html[data-theme=dark] .mobile-add{background:#ececec;color:#212121;box-shadow:0 7px 22px rgba(0,0,0,.28)}
+html[data-theme=dark] .mobile-add:hover:not(:disabled){background:#fff}
+@media(max-width:780px){.mobile-add{right:18px;bottom:calc(81px + env(safe-area-inset-bottom))}.content{padding-bottom:160px}}
