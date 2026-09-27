@@ -35,6 +35,11 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
     event.preventDefault();
     setError('');
     setNotice('');
+    const address = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      setError('Enter a valid email address, like you@example.com.');
+      return;
+    }
     if (mode === 'signup' && password !== confirmPassword) {
       setError('The passwords do not match.');
       return;
@@ -43,7 +48,6 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
     setBusy(true);
     try {
       const db = browserSupabase();
-      const address = email.trim();
       if (mode === 'reset') {
         const { error: resetError } = await db.auth.resetPasswordForEmail(address, {
           redirectTo: `${window.location.origin}/auth/recovery`,
@@ -132,7 +136,7 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
       <form className={`auth-email-form ${styles.form}`} onSubmit={submitEmail}>
         <div className={styles.field}>
           <label htmlFor="auth-email">Email address</label>
-          <input id="auth-email" type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required disabled={busy} />
+          <input id="auth-email" type="email" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required disabled={busy} />
         </div>
         {mode !== 'reset' && <div className={`${styles.passwordFields} ${mode === 'signup' ? styles.signupPasswordFields : ''}`}>
           <div className={styles.field}>

@@ -128,45 +128,49 @@
 .page:global(.auth-login-page) :global(.login-card) {
   justify-self: center;
   width: min(100%, 440px);
-  padding: 24px 30px;
+  padding: 16px 30px;
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
 .page:global(.auth-login-page) :global(.auth-brand) {
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .page:global(.auth-login-page) :global(.auth-tabs) {
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .page:global(.auth-login-page) :global(.auth-intro) p {
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .page:global(.auth-login-page) :global(.auth-divider) {
-  margin: 14px 0;
+  margin: 10px 0;
 }
 
 .page:global(.auth-login-page) :global(.auth-hint) {
-  margin-top: 10px;
+  margin-top: 4px;
+}
+
+.page:global(.auth-login-page) :global(.auth-error) {
+  margin-bottom: 8px;
 }
 
 .page:global(.auth-login-page) :global(.auth-foot) {
-  margin-top: 17px;
-  padding-top: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
 }
 
 .form:global(.auth-email-form) {
-  gap: 14px;
+  gap: 9px;
 }
 
 .field {
   display: grid;
   min-width: 0;
-  gap: 7px;
+  gap: 5px;
 }
 
 :global(.auth-email-form) .field input {
@@ -175,11 +179,11 @@
 
 .passwordFields {
   display: grid;
-  gap: 14px;
+  gap: 8px;
 }
 
 .signupPasswordFields {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .passwordControl {
