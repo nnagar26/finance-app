@@ -6,6 +6,13 @@ import { browserSupabase } from '@/lib/supabase-browser';
 
 type Step = 'closed' | 'verify' | 'confirm';
 
+function estimatedDeadline() {
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  }).format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+}
+
 export default function AccountDeletionPanel({ email }: { email: string }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>('closed');
@@ -18,9 +25,7 @@ export default function AccountDeletionPanel({ email }: { email: string }) {
     if (new URLSearchParams(window.location.search).get('delete') !== 'confirm') return;
     const timer = window.setTimeout(() => {
       setStep('confirm');
-      setDeadline(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleString(undefined, {
-        dateStyle: 'long', timeStyle: 'short', timeZoneName: 'short',
-      }));
+      setDeadline(estimatedDeadline());
       window.history.replaceState(null, '', '/settings');
     }, 0);
     return () => window.clearTimeout(timer);
@@ -28,9 +33,7 @@ export default function AccountDeletionPanel({ email }: { email: string }) {
 
   function open() {
     setError('');
-    setDeadline(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleString(undefined, {
-      dateStyle: 'long', timeStyle: 'short', timeZoneName: 'short',
-    }));
+    setDeadline(estimatedDeadline());
     setStep('verify');
   }
   async function beginChallenge() {
