@@ -1,4 +1,4 @@
-import { Banknote, CarFront, Coffee, CreditCard, Fuel, Gift, HeartPulse, House, Landmark, Laptop, Lightbulb, MoreHorizontal, Plane, Repeat2, ShoppingBag, ShoppingCart, Smartphone, Tag, Utensils, Wallet, Wrench } from 'lucide-react';
+import { Banknote, CarFront, Coffee, CreditCard, Fuel, Gift, HeartPulse, House, Landmark, Laptop, Lightbulb, MoreHorizontal, Plane, Repeat2, Shapes, ShoppingBag, ShoppingCart, Smartphone, Tag, Utensils, Wallet, Wrench } from 'lucide-react';
 import { createElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -30,7 +30,8 @@ function iconFor(kind: ReferenceKind, name: string): LucideIcon {
   if (/subscription|stream|entertainment/.test(label)) return Repeat2;
   if (/bank|fee|loan|salary|income|paycheck/.test(label)) return Banknote;
   if (/repair|maintenance/.test(label)) return Wrench;
-  if (/misc|other|uncategorized/.test(label)) return MoreHorizontal;
+  if (/misc/.test(label)) return Shapes;
+  if (/other|uncategorized/.test(label)) return MoreHorizontal;
   return Tag;
 }
 
