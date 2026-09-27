@@ -212,7 +212,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
       <div className="sidebar-bottom"><div className="privacy-card"><div className="privacy-icon"><Wallet size={18}/></div><strong>Your money, clearly.</strong><span>A calmer way to see your financial life.</span></div><button type="button" className="account-chip account-button" onClick={() => router.push('/settings')}><div className="avatar">{accountName.slice(0,1).toUpperCase()}</div><div><strong>{accountName}</strong><small>{localMode ? 'Local workspace' : email}</small></div><Settings2 size={15}/></button></div>
     </aside>
     <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" ref={menuButtonRef} onClick={openMobileMenu} aria-label="Open menu" aria-expanded={mobileMenu}><Menu size={22}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></div></header>
-      <main className={`content ${section === 'dashboard' ? 'dashboard-content' : ''}`}>
+      <main className="content">
         {localMode && <div className="notice">Local mode · Data is saved in this project’s .local-data folder on this laptop.</div>}
         {error && <div className="error-box page-error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
         {section === 'dashboard' && <>
