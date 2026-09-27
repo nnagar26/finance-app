@@ -196,8 +196,8 @@ html[data-theme=dark] .dashboard-greeting.afternoon .greeting-icon{color:#62c1e3
 html[data-theme=dark] .dashboard-greeting.evening .greeting-icon{color:#b99aff}
 @media(max-width:780px){.top-actions{gap:8px}.theme-toggle button{width:36px;height:36px}}
 
-/* Keep Add in the header so it never covers a date or a row action. */
-.mobile-add{position:static;right:auto;bottom:auto;flex-shrink:0;width:44px;height:44px;border-radius:11px}
+.dashboard-heading-actions{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.dashboard-add-button{min-height:44px}
 .calendar-weekday-mobile{display:none}
 
 @media (min-width:781px) and (max-height:700px){
@@ -206,13 +206,17 @@ html[data-theme=dark] .dashboard-greeting.evening .greeting-icon{color:#b99aff}
 }
 
 @media(max-width:780px){
-  .mobile-add{position:static;right:auto;bottom:auto;width:44px;height:44px}
   .theme-toggle{display:none}
   .breadcrumb{flex:1}
   .top-actions{flex-shrink:0}
   .icon-button,.row-buttons .icon-button,.compact .row-buttons .icon-button{width:44px;height:44px}
   .quick-ranges button,.theme-choice{min-height:44px}
   .month-picker button{width:44px;height:44px}
+}
+
+@media(max-width:560px){
+  .dashboard-heading-actions{align-items:stretch;width:100%}
+  .dashboard-add-button{width:100%}
 }
 
 @media(max-width:560px){
