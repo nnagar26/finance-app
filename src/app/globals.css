@@ -77,3 +77,9 @@ html[data-theme=dark] .auth-login-page{background:#eef0f2;color:#06070a}
 .pie-legend{width:100%;display:flex;flex-direction:column;gap:10px}
 .pie-legend-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px}
 .pie-legend-row>span{min-width:0;display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.breakdown-line span svg,.pie-legend-row span svg{flex-shrink:0;color:var(--muted)}
+.transaction-main .transaction-method{display:inline-flex;align-items:center;gap:3px;vertical-align:middle}
+.transaction-method svg{flex-shrink:0}
+.reference-row .reference-label{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.reference-label>svg{flex-shrink:0;color:var(--muted)}
+.reference-label>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
