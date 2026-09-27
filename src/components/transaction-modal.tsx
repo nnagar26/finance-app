@@ -49,7 +49,7 @@ export default function TransactionModal({ meta, transaction, tagIds = [], onClo
       const amount_minor = parseMoneyInput(amount);
       const res = await fetch('/api/mutate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'transaction.save', id: transaction?.id, values: {
-          transaction_date: date, amount_minor, currency_code: currency, type, other_effect: type === 'other' ? effect : null,
+          transaction_date: date, amount_minor, currency_code: transaction ? currency : meta.settings.currency_code, type, other_effect: type === 'other' ? effect : null,
           category_id: type === 'income' ? null : category || null, payment_method_id: type === 'income' ? null : method || null, account_id: type === 'expense' ? null : account || null,
           description, notes, tag_ids: tags,
         } }), });
@@ -64,9 +64,9 @@ export default function TransactionModal({ meta, transaction, tagIds = [], onClo
     <div className="modal-head"><div><div className="eyebrow">YOUR LEDGER</div><h2>{transaction ? 'Edit transaction' : 'Add transaction'}</h2></div><button className="icon-button" aria-label="Close" onClick={onClose}><X size={20} /></button></div>
     <form onSubmit={save} className="stack gap-md">
       <div className="type-pills">{(['expense','income'] as TransactionType[]).map(v => <button type="button" className={`pill ${v} ${type === v ? 'selected' : ''}`} key={v} onClick={() => { setType(v); setCategory(''); }}>{v[0].toUpperCase() + v.slice(1)}</button>)}{type === 'other' && <span className="pill other selected">Other (legacy)</span>}</div>
-      <div className="form-grid"><label className="field"><span>Amount</span><input type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} required autoFocus /></label>
-        <label className="field"><span>Currency</span><select value={currency} onChange={e => setCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></label></div>
-      <label className="field"><span>Date</span><input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label>
+      <div className="form-grid"><label className="field"><span>Amount <em className="required-mark" aria-hidden="true">*</em></span><div className="amount-input-wrap"><input type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} required autoFocus aria-describedby="amount-currency-hint" /><span id="amount-currency-hint" className="amount-currency">{transaction ? currency : meta.settings.currency_code}</span></div></label>
+        <label className="field"><span>Date <em className="required-mark" aria-hidden="true">*</em></span><input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label></div>
+      {transaction && <label className="field"><span>Currency</span><select value={currency} onChange={e => setCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></label>}
       {type === 'other' && <label className="field"><span>How does this affect totals?</span><select value={effect} onChange={e => { setEffect(e.target.value as FinancialEffect); setCategory(''); }}><option value="expense">Expense</option><option value="income">Income</option><option value="neutral">Neutral</option></select></label>}
       {(type === 'expense' || type === 'other') && <><div className="form-grid"><label className="field"><span>Category</span><select value={category} onChange={e => setCategory(e.target.value)}><option value="">Uncategorized</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
         <label className="field"><span>Payment method</span><select value={method} onChange={e => setMethod(e.target.value)}><option value="">Not specified</option>{meta.payment_methods.filter(x => x.active || x.id === method).map(x => <option value={x.id} key={x.id}>{x.name}</option>)}</select></label></div></>}
