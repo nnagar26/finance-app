@@ -297,15 +297,14 @@ function BreakdownPanel({ title, subtitle, rows, totalExpenses, kind, name, mone
 }
 function BreakdownBars({ rows, totalExpenses, kind, name, money }: BreakdownProps) {
   const positive = rows.filter(row => row.amount > 0);
-  const visible = positive.slice(0, 8);
-  const max = Math.max(...visible.map(row => row.amount), 1);
-  return visible.length ? <div className="breakdown">{visible.map((row, index) => <div className="breakdown-row" key={row.id}>
+  const max = Math.max(...positive.map(row => row.amount), 1);
+  return positive.length ? <div className="breakdown">{positive.map((row, index) => <div className="breakdown-row" key={row.id}>
     <div className="breakdown-line"><span><i className={`category-dot dot-${index % 5}`}/><ReferenceIcon kind={kind} name={name(row.id)} size={15}/>{name(row.id)}</span><strong>{money(row.amount)} <small>{percentLabel(row.amount, totalExpenses)}</small></strong></div>
     <div className="bar-track"><div style={{ width: `${row.amount / max * 100}%`, background: `var(--chart-${index % 5})` }}/></div>
-  </div>)}{positive.length > 8 && <p className="breakdown-note">Showing 8 of {positive.length} groups</p>}</div> : <Empty title="No spending yet" description="Your breakdown will appear as transactions come in."/>;
+  </div>)}</div> : <Empty title="No spending yet" description="Your breakdown will appear as transactions come in."/>;
 }
 function BreakdownPie({ rows, totalExpenses, kind, name, money }: BreakdownProps) {
-  const slices = pieBreakdown(rows);
+  const slices = pieBreakdown(rows, Number.POSITIVE_INFINITY);
   if (!slices.length) return <Empty title="No spending yet" description="Your breakdown will appear as transactions come in."/>;
   const label = (id: string) => id === 'other-groups' ? 'Other groups' : name(id);
   const chartSlices = slices.map(row => ({ ...row, displayName: label(row.id) }));
