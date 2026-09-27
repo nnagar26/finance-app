@@ -287,12 +287,12 @@ type BreakdownProps = { rows: BreakdownRow[]; totalExpenses: number; kind: 'cate
 function percentLabel(amount: number, totalExpenses: number) { return `${expensePercent(amount, totalExpenses).toFixed(1)}%`; }
 function BreakdownPanel({ title, subtitle, rows, totalExpenses, kind, name, money }: BreakdownProps & { title: string; subtitle: string }) {
   const [view, setView] = useState<'bars' | 'pie'>('bars');
-  return <div className="panel breakdown-panel">
+  return <div className={`panel breakdown-panel ${view === 'pie' ? 'pie-view' : ''}`}>
     <div className="panel-title-row breakdown-heading"><PanelHead title={title} subtitle={subtitle}/><div className="breakdown-switch" role="group" aria-label={`${title} chart view`}>
       <button type="button" aria-pressed={view === 'bars'} className={view === 'bars' ? 'active' : ''} onClick={() => setView('bars')}>Bars</button>
       <button type="button" aria-pressed={view === 'pie'} className={view === 'pie' ? 'active' : ''} onClick={() => setView('pie')}>Pie</button>
     </div></div>
-    {view === 'bars' ? <BreakdownBars rows={rows} totalExpenses={totalExpenses} kind={kind} name={name} money={money}/> : <BreakdownPie rows={rows} totalExpenses={totalExpenses} kind={kind} name={name} money={money}/>}
+    <div className="breakdown-content">{view === 'bars' ? <BreakdownBars rows={rows} totalExpenses={totalExpenses} kind={kind} name={name} money={money}/> : <BreakdownPie rows={rows} totalExpenses={totalExpenses} kind={kind} name={name} money={money}/>}</div>
   </div>;
 }
 function BreakdownBars({ rows, totalExpenses, kind, name, money }: BreakdownProps) {
