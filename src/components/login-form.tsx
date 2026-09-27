@@ -3,7 +3,9 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, LockKeyhole } from 'lucide-react';
+import Image from 'next/image';
 import { browserSupabase } from '@/lib/supabase-browser';
+import styles from './login-form.module.css';
 
 type AuthMode = 'login' | 'signup' | 'reset';
 
@@ -87,7 +89,19 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
     }
   }
 
-  return <main className="auth-page auth-login-page">
+  return <main className={`auth-page auth-login-page ${styles.page}`}>
+    <section className={styles.introduction} aria-labelledby="finance-intro-title">
+      <div className={styles.introCopy}>
+        <span className={styles.kicker}>A clearer view of your money</span>
+        <h2 id="finance-intro-title">Know where your money goes.</h2>
+        <p>Track income and expenses, see monthly trends, and keep your finances in one private place.</p>
+        <p className={styles.howItWorks}><strong>How it works</strong> Add a transaction and My Finance brings it into your dashboard and reports.</p>
+      </div>
+      <div className={styles.illustration}>
+        <Image src="/images/finance-intro.jpg" alt="" fill priority sizes="(max-width: 760px) 100vw, 55vw" className={styles.image} />
+        <span className={styles.imageTitle}>My Finance App</span>
+      </div>
+    </section>
     <section className="auth-card login-card" aria-labelledby="auth-title">
       <div className="auth-brand"><div className="brand-mark" aria-hidden="true">M</div><span>MY FINANCE</span></div>
       <div className="auth-tabs" role="group" aria-label="Account access">
