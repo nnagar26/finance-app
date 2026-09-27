@@ -18,7 +18,7 @@ import ReferenceIcon from './reference-icon';
 
 type Overview = { summary: ReturnType<typeof totals>; months: (ReturnType<typeof totals> & { month: number; key: string })[]; categories: { id: string; amount: number }[]; methods: { id: string; amount: number }[]; recent: Transaction[] };
 type TransactionResult = { rows: Transaction[]; total: number; page: number; tagLinks: { transaction_id: string; tag_id: string }[] };
-type CalendarResult = { rows: Transaction[]; dayRows: Transaction[]; dayTotals: ReturnType<typeof totals>; weekTotals: ReturnType<typeof totals>; monthTotals: ReturnType<typeof totals> };
+type CalendarResult = { rows: Transaction[]; dayRows: Transaction[]; dayTotals: ReturnType<typeof totals>; weekTotals: ReturnType<typeof totals>; monthTotals: ReturnType<typeof totals>; today?: string };
 
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -243,9 +243,36 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
             <div className="dashboard-grid lower"><BreakdownPanel title="Category breakdown" subtitle={`${months[month-1]} ${year}`} kind="category" rows={overview.categories} totalExpenses={overview.summary.expenses} name={id => nameOf('categories', id)} money={money}/><BreakdownPanel title="By payment method" subtitle={`${months[month-1]} ${year}`} kind="payment" rows={overview.methods} totalExpenses={overview.summary.expenses} name={id => nameOf('payment_methods', id)} money={money}/></div>
             <div className="panel chart-panel"><div className="panel-title-row report-chart-heading"><PanelHead title="Month by month" subtitle={`${reportMetric === 'both' ? 'Income and expenses' : reportMetric === 'income' ? 'Income' : 'Expenses'} across ${year}`}/><div className="report-metric-switch" role="group" aria-label="Month by month chart metric"><button type="button" className={reportMetric === 'expenses' ? 'active expenses' : ''} aria-pressed={reportMetric === 'expenses'} onClick={() => setReportMetric('expenses')}>Expenses</button><button type="button" className={reportMetric === 'income' ? 'active income' : ''} aria-pressed={reportMetric === 'income'} onClick={() => setReportMetric('income')}>Income</button><button type="button" className={reportMetric === 'both' ? 'active both' : ''} aria-pressed={reportMetric === 'both'} onClick={() => setReportMetric('both')}>Both</button></div></div><MonthlyBarChart rows={overview.months} metric={reportMetric} money={money}/></div>
           </div> : <Loading/>}</>}
-        {section === 'calendar' && <><PageHeading eyebrow="DAILY VIEW" title="Spending calendar" description="See the rhythm of your everyday spending." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
-          {calendar ? <><div className="calendar-layout"><div className="panel calendar-panel"><div className="calendar-weekdays">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x => <span key={x}>{x}</span>)}</div><div className="calendar-grid">{calendarCells(year,month).map((day,i) => day ? <button key={i} className={`calendar-cell ${selectedDay === day ? 'selected' : ''}`} onClick={() => setSelectedDay(day)}><span>{Number(day.slice(-2))}</span><strong>{money(totals(calendar.rows.filter(t => t.transaction_date === day)).expenses)}</strong></button> : <div className="calendar-cell empty" key={i}/>)}</div></div>
-            <div className="calendar-side"><div className="panel"><div className="eyebrow">SELECTED DAY</div><h2>{new Date(`${selectedDay}T12:00:00Z`).toLocaleDateString('en-CA',{ weekday:'long', month:'long', day:'numeric' })}</h2><div className="daily-total">{money(calendar.dayTotals.expenses)}</div><p className="muted">Expenses on this day</p><div className="mini-totals"><div><span>This week</span><strong>{money(calendar.weekTotals.expenses)}</strong></div><div><span>This month</span><strong>{money(calendar.monthTotals.expenses)}</strong></div></div></div><div className="panel"><PanelHead title="Transactions" subtitle={`${calendar.dayRows.length} on this day`}/><TransactionList rows={calendar.dayRows} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div></div>
+        {section === 'calendar' && <><PageHeading eyebrow="DAILY VIEW" title="Financial calendar" description="See the rhythm of your daily income and spending." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
+          {calendar ? <><div className="calendar-layout"><div className="panel calendar-panel"><div className="calendar-weekdays">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x => <span key={x}>{x}</span>)}</div><div className="calendar-grid">{calendarCells(year,month).map((day,i) => {
+            if (!day) return <div className="calendar-cell empty" key={i}/>;
+            const dayTotals = totals(calendar.rows.filter(t => t.transaction_date === day));
+            const isSelected = selectedDay === day;
+            const isToday = day === (calendar.today || localDate(new Date(), meta?.settings.time_zone));
+            const hasIncome = dayTotals.income > 0;
+            const hasExpenses = dayTotals.expenses > 0;
+            return <button key={i} type="button" className={`calendar-cell ${isSelected ? 'selected' : ''} ${isToday ? 'is-today' : ''}`} onClick={() => setSelectedDay(day)}>
+              <div className="calendar-cell-top">
+                <span className="calendar-day-num">{Number(day.slice(-2))}</span>
+                {isToday && <span className="today-badge">Today</span>}
+              </div>
+              {(hasIncome || hasExpenses) && <div className="calendar-cell-values">
+                {hasIncome && <span className="calendar-income">+{money(dayTotals.income)}</span>}
+                {hasExpenses && <span className="calendar-expense">-{money(dayTotals.expenses)}</span>}
+              </div>}
+            </button>;
+          })}</div></div>
+            <div className="calendar-side"><div className="panel"><div className="eyebrow">SELECTED DAY</div><h2>{new Date(`${selectedDay}T12:00:00Z`).toLocaleDateString('en-CA',{ weekday:'long', month:'long', day:'numeric' })}</h2>
+              <div className="day-summary-cards">
+                <div className="day-metric-card income"><span className="day-metric-label"><ArrowDownLeft size={13}/> Income</span><strong className="day-metric-value">{money(calendar.dayTotals.income)}</strong></div>
+                <div className="day-metric-card expense"><span className="day-metric-label"><ArrowUpRight size={13}/> Expenses</span><strong className="day-metric-value">{money(calendar.dayTotals.expenses)}</strong></div>
+              </div>
+              {calendar.dayTotals.income > 0 && calendar.dayTotals.expenses > 0 && <div className="day-net-row"><span>Net balance</span><strong className={calendar.dayTotals.savings >= 0 ? 'positive' : 'negative'}>{calendar.dayTotals.savings >= 0 ? '+' : ''}{money(calendar.dayTotals.savings)}</strong></div>}
+              <div className="mini-totals">
+                <div className="mini-total-row"><span className="mini-label">This week</span><div className="mini-values">{calendar.weekTotals.income > 0 && <span className="positive">+{money(calendar.weekTotals.income)}</span>}<span className="negative">-{money(calendar.weekTotals.expenses)}</span></div></div>
+                <div className="mini-total-row"><span className="mini-label">This month</span><div className="mini-values">{calendar.monthTotals.income > 0 && <span className="positive">+{money(calendar.monthTotals.income)}</span>}<span className="negative">-{money(calendar.monthTotals.expenses)}</span></div></div>
+              </div>
+            </div><div className="panel"><PanelHead title="Transactions" subtitle={`${calendar.dayRows.length} on this day`}/><TransactionList rows={calendar.dayRows} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div></div>
           </> : <Loading/>}</>}
         {section === 'recurring' && meta && <><PageHeading eyebrow="ROUTINES" title="Recurring transactions" description="Keep regular payments ready without losing control." right={<button className="button secondary" onClick={() => setEditingRule(null)}><Plus size={17}/> New recurring item</button>}/>
           {dueCount > 0 && <div className="panel due-panel"><PanelHead title="Ready for review" subtitle="Post or skip each due item. Only posted items affect your totals."/>{meta.recurring_rules.filter(r => r.active && r.next_due_on <= localDate(new Date(), meta.settings.time_zone)).map(r => <div className="rule-row" key={r.id}><div className="rule-icon"><Repeat2 size={19}/></div><div className="rule-main"><div className="rule-name"><strong>{r.name}</strong><span className={`rule-type ${recurringEffect(r)}`}>{recurringType(r)}</span></div><span>Due {r.next_due_on} · {r.frequency}</span></div><strong>{formatMoney(r.amount_minor, r.currency_code)}</strong><div className="rule-actions"><button className="button small ghost" disabled={busy} onClick={() => mutate({ action: 'recurring.review', id: r.id, choice: 'skip' })}>Skip</button><button className="button small primary" disabled={busy} onClick={() => mutate({ action: 'recurring.review', id: r.id, choice: 'post' })}>Post</button></div></div>)}</div>}
