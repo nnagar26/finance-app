@@ -123,3 +123,23 @@ html[data-theme=dark] .mobile-add:hover:not(:disabled){background:#fff}
   .income-chart-heading .panel-head{margin-bottom:0}
   .income-expense-chart .chart-wrap{height:190px}
 }
+
+.theme-toggle{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--border);border-radius:999px;background:var(--surface-soft)}
+.theme-toggle button{width:38px;height:38px;border:0;border-radius:50%;display:grid;place-items:center;background:transparent;color:var(--muted);transition:background-color .16s ease,color .16s ease,box-shadow .16s ease}
+.theme-toggle button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.theme-toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dashboard-greeting.morning{color:#8a590d}
+.dashboard-greeting.afternoon{color:#24678b}
+.dashboard-greeting.evening{color:#67528d}
+.dashboard-greeting.morning .greeting-icon{color:#dc8c17}
+.dashboard-greeting.afternoon .greeting-icon{color:#1883a2}
+.dashboard-greeting.evening .greeting-icon{color:#8265bd}
+.recent-activity-content{height:360px;overflow-y:auto;overscroll-behavior:contain;padding-right:5px}
+.recent-activity-content>.empty-state{height:100%}
+html[data-theme=dark] .dashboard-greeting.morning{color:#efc36c}
+html[data-theme=dark] .dashboard-greeting.afternoon{color:#8bd2ed}
+html[data-theme=dark] .dashboard-greeting.evening{color:#c0a7f0}
+html[data-theme=dark] .dashboard-greeting.morning .greeting-icon{color:#ffc857}
+html[data-theme=dark] .dashboard-greeting.afternoon .greeting-icon{color:#62c1e3}
+html[data-theme=dark] .dashboard-greeting.evening .greeting-icon{color:#b99aff}
+@media(max-width:780px){.top-actions{gap:8px}.theme-toggle button{width:36px;height:36px}}

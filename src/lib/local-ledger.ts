@@ -235,7 +235,7 @@ export async function localView(params: URLSearchParams): Promise<unknown> {
     const selected = rows.filter(row => row.transaction_date.startsWith(prefix));
     return { summary: totals(selected), months: byMonth(rows, year),
       categories: breakdown(selected, 'category_id'), methods: breakdown(selected, 'payment_method_id'),
-      recent: selected.slice(0, 6) };
+      recent: selected.slice(0, 12) };
   }
   if (view === 'calendar') {
     const year = Number(params.get('year'));

@@ -53,6 +53,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [activeTheme, setActiveTheme] = useState<'light' | 'dark'>('light');
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [profileName, setProfileName] = useState('');
@@ -87,7 +88,9 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
     const theme = themePreference;
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
-      document.documentElement.dataset.theme = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme;
+      const effectiveTheme = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme;
+      document.documentElement.dataset.theme = effectiveTheme;
+      setActiveTheme(effectiveTheme);
     };
     window.localStorage.setItem('finance-theme', theme);
     apply();
@@ -178,6 +181,20 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
     try { await mutate({ action: 'currency.setReporting', currency: next }); }
     catch { /* mutate already displays the actionable error */ }
   }
+  async function changeTheme(next: 'light' | 'dark') {
+    if (next === activeTheme) return;
+    document.documentElement.dataset.theme = next;
+    window.localStorage.setItem('finance-theme', next);
+    setActiveTheme(next);
+    try { await mutate({ action: 'settings.save', values: { theme: next } }); }
+    catch {
+      const savedPreference = themePreference ?? 'light';
+      const fallback = savedPreference === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : savedPreference;
+      document.documentElement.dataset.theme = fallback;
+      window.localStorage.setItem('finance-theme', savedPreference);
+      setActiveTheme(fallback);
+    }
+  }
   function changeYear(value: number) { setYear(value); setSelectedDay(`${value}-${String(month).padStart(2, '0')}-01`); }
   function changeMonth(value: number) { setMonth(value); setSelectedDay(`${year}-${String(value).padStart(2, '0')}-01`); }
   async function openEdit(t: Transaction) {
@@ -212,16 +229,16 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
       <div className="nav-label">WORKSPACE</div><nav className="side-nav">{links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={closeMobileMenu} className={section === href.slice(1) ? 'nav-link active' : 'nav-link'}><Icon size={19} strokeWidth={1.9}/><span>{label}</span>{label === 'Recurring' && dueCount > 0 && <em>{dueCount}</em>}</Link>)}</nav>
       <div className="sidebar-bottom"><div className="privacy-card"><div className="privacy-icon"><Wallet size={18}/></div><strong>Your money, clearly.</strong><span>A calmer way to see your financial life.</span></div><button type="button" className="account-chip account-button" onClick={() => router.push('/settings')}><div className="avatar">{accountName.slice(0,1).toUpperCase()}</div><div><strong>{accountName}</strong><small>{localMode ? 'Local workspace' : email}</small></div><Settings2 size={15}/></button></div>
     </aside>
-    <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" ref={menuButtonRef} onClick={openMobileMenu} aria-label="Open menu" aria-expanded={mobileMenu}><Menu size={22}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></div></header>
+    <div className="main-wrap"><header className="topbar"><button className="icon-button hamburger" ref={menuButtonRef} onClick={openMobileMenu} aria-label="Open menu" aria-expanded={mobileMenu}><Menu size={22}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/> <strong>{section[0].toUpperCase() + section.slice(1)}</strong></div><div className="top-actions"><div className="theme-toggle" role="group" aria-label="Color theme"><button type="button" className={activeTheme === 'light' ? 'active' : ''} aria-label="Use light theme" aria-pressed={activeTheme === 'light'} title="Light theme" disabled={busy || !meta} onClick={() => changeTheme('light')}><Sun size={16}/></button><button type="button" className={activeTheme === 'dark' ? 'active' : ''} aria-label="Use dark theme" aria-pressed={activeTheme === 'dark'} title="Dark theme" disabled={busy || !meta} onClick={() => changeTheme('dark')}><Moon size={16}/></button></div><select className="currency-select" aria-label="Reporting currency" value={currency} disabled={busy || !meta} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select></div></header>
       <main className="content">
         {localMode && <div className="notice">Local mode · Data is saved in this project’s .local-data folder on this laptop.</div>}
         {error && <div className="error-box page-error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
         {section === 'dashboard' && <>
-          <PageHeading greeting={greeting ? `${greeting}${greetingName ? `, ${greetingName}` : ''}` : undefined} className="dashboard-page-heading" eyebrow="OVERVIEW" title="Your financial picture" description="A clear view of what came in, what went out, and what stayed." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
+          <PageHeading greeting={greeting ? `${greeting}${greetingName ? `, ${greetingName}` : ''}` : undefined} className="dashboard-page-heading" eyebrow="" title="Your financial picture" description="A clear view of what came in, what went out, and what stayed." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
           {overview ? <><div className="metric-grid"><Metric label="Income this month" value={money(overview.summary.income)} icon={<ArrowDownLeft size={20}/>} color="green" amountTone="income" detail="Money in this month"/><Metric label="Expenses this month" value={money(overview.summary.expenses)} icon={<ArrowUpRight size={20}/>} color="coral" amountTone="expense" detail="Money out this month"/><Metric label="Net savings" value={money(overview.summary.savings)} icon={<Wallet size={20}/>} color="blue" detail="Income minus expenses"/></div>
             <div className="dashboard-grid dashboard-full-width"><div className="panel chart-panel"><div className="panel-title-row income-chart-heading"><PanelHead title="Income & expenses" subtitle={`${year} at a glance`}/><div className="breakdown-switch" role="group" aria-label="Income and expenses chart type"><button type="button" aria-pressed={incomeChartMode === 'line'} className={incomeChartMode === 'line' ? 'active' : ''} onClick={() => setIncomeChartMode('line')}>Line</button><button type="button" aria-pressed={incomeChartMode === 'bars'} className={incomeChartMode === 'bars' ? 'active' : ''} onClick={() => setIncomeChartMode('bars')}>Bars</button></div></div><IncomeExpenseChart rows={overview.months} money={money} mode={incomeChartMode}/></div></div>
             <div className="dashboard-grid dashboard-breakdowns"><BreakdownPanel title="Where it went" subtitle="Spending by category" kind="category" rows={overview.categories} totalExpenses={overview.summary.expenses} name={id => nameOf('categories', id)} money={money}/><BreakdownPanel title="Payment methods" subtitle="Expenses this month" kind="payment" rows={overview.methods} totalExpenses={overview.summary.expenses} name={id => nameOf('payment_methods', id)} money={money}/></div>
-            <div className="dashboard-grid dashboard-full-width"><div className="panel dashboard-recent-panel"><div className="panel-title-row"><PanelHead title="Recent activity" subtitle="Latest this month"/><Link href="/transactions" className="text-button">View all <ArrowUpRight size={15}/></Link></div><TransactionList rows={overview.recent} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div>
+            <div className="dashboard-grid dashboard-full-width"><div className="panel dashboard-recent-panel"><div className="panel-title-row"><PanelHead title="Recent activity" subtitle="Latest this month"/><Link href="/transactions" className="text-button">View all <ArrowUpRight size={15}/></Link></div><div className="recent-activity-content"><TransactionList rows={overview.recent} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div></div>
           </> : <Loading/>}
         </>}
         {section === 'transactions' && <>
@@ -290,7 +307,11 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   </div>;
 }
 
-function PageHeading({ eyebrow, title, description, right, greeting, className }: { eyebrow: string; title: string; description: string; right?: React.ReactNode; greeting?: string; className?: string }) { return <div className={`page-heading ${className ?? ''}`}><div><div className="page-heading-kicker">{greeting && <span className="dashboard-greeting">{greeting.startsWith('Good morning') ? <Sunrise size={17} aria-hidden="true"/> : greeting.startsWith('Good afternoon') ? <Sun size={17} aria-hidden="true"/> : <Moon size={17} aria-hidden="true"/>}{greeting}</span>}<div className="eyebrow">{eyebrow}</div></div><h1>{title}</h1><p>{description}</p></div>{right && <div className="heading-actions">{right}</div>}</div>; }
+function PageHeading({ eyebrow, title, description, right, greeting, className }: { eyebrow: string; title: string; description: string; right?: React.ReactNode; greeting?: string; className?: string }) {
+  const greetingPeriod = greeting?.startsWith('Good morning') ? 'morning' : greeting?.startsWith('Good afternoon') ? 'afternoon' : 'evening';
+  const GreetingIcon = greetingPeriod === 'morning' ? Sunrise : greetingPeriod === 'afternoon' ? Sun : Moon;
+  return <div className={`page-heading ${className ?? ''}`}><div><div className="page-heading-kicker">{greeting && <span className={`dashboard-greeting ${greetingPeriod}`}><GreetingIcon className="greeting-icon" size={18} aria-hidden="true"/>{greeting}</span>}{eyebrow && <div className="eyebrow">{eyebrow}</div>}</div><h1>{title}</h1><p>{description}</p></div>{right && <div className="heading-actions">{right}</div>}</div>;
+}
 function MonthPicker({ year, month, setYear, setMonth, shift }: { year: number; month: number; setYear: (x:number)=>void; setMonth:(x:number)=>void; shift:(x:number)=>void }) { return <div className="month-picker"><button onClick={() => shift(-1)} aria-label="Previous month"><ChevronLeft size={18}/></button><select aria-label="Month" value={month} onChange={e => setMonth(Number(e.target.value))}>{months.map((m,i) => <option key={m} value={i+1}>{m}</option>)}</select><input aria-label="Year" type="number" min="1900" max="2200" value={year} onChange={e => setYear(Number(e.target.value))}/><button onClick={() => shift(1)} aria-label="Next month"><ChevronRight size={18}/></button></div>; }
 function Metric({ label, value, icon, color, amountTone, detail }: { label: string; value: string; icon: React.ReactNode; color: string; amountTone?: 'income' | 'expense'; detail?: string }) { return <div className="metric panel"><div className="metric-top"><span>{label}</span><div className={`metric-icon ${color}`}>{icon}</div></div><strong className={amountTone ? `metric-amount ${amountTone}` : 'metric-amount'}>{value}</strong><small>{detail ?? 'Selected month'}</small></div>; }
 function PanelHead({ title, subtitle }: { title: string; subtitle: string }) { return <div className="panel-head"><h2>{title}</h2><p>{subtitle}</p></div>; }
