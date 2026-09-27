@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDownLeft, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Download, LayoutDashboard, ListFilter, LogOut, Menu, Moon, MoreHorizontal, Plus, Repeat2, Search, Settings2, Sun, Sunrise, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
 import { formatMoney, localDate, totals } from '@/lib/finance';
 import { expensePercent, pieBreakdown } from '@/lib/breakdown-display';
@@ -15,6 +15,8 @@ import RecurringModal from './recurring-modal';
 import { browserSupabase } from '@/lib/supabase-browser';
 import AccountDeletionPanel from './account-deletion-panel';
 import ReferenceIcon from './reference-icon';
+import ReportsPage from './reports-page';
+import type { MonthlyReport } from '@/lib/finance';
 
 type Overview = { summary: ReturnType<typeof totals>; months: (ReturnType<typeof totals> & { month: number; key: string })[]; categories: { id: string; amount: number }[]; methods: { id: string; amount: number }[]; recent: Transaction[] };
 type TransactionResult = { rows: Transaction[]; total: number; page: number; tagLinks: { transaction_id: string; tag_id: string }[] };
@@ -40,12 +42,12 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const [month, setMonth] = useState(initial.getMonth() + 1);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [report, setReport] = useState<{ key: string; data: MonthlyReport } | null>(null);
   const [transactions, setTransactions] = useState<TransactionResult | null>(null);
   const [calendar, setCalendar] = useState<CalendarResult | null>(null);
   const [selectedDay, setSelectedDay] = useState(localDate());
   const [filters, setFilters] = useState({ q: '', from: '', to: '', month: '', year: '', type: '', category: '', method: '', account: '', min: '', max: '', order: 'newest', page: '1' });
   const [showFilters, setShowFilters] = useState(false);
-  const [reportMetric, setReportMetric] = useState<'expenses' | 'income' | 'both'>('expenses');
   const [incomeChartMode, setIncomeChartMode] = useState<'line' | 'bars'>('line');
   const [editing, setEditing] = useState<Transaction | null | undefined>(undefined);
   const [editingTagIds, setEditingTagIds] = useState<string[]>([]);
@@ -68,8 +70,16 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
 
   useEffect(() => { let live = true; fetchJson<Meta>('/api/data?view=meta').then(x => { if (live) setMeta(x); }).catch(e => { if (live) setError(e.message); }); return () => { live = false; }; }, [revision]);
   useEffect(() => {
-    if (section !== 'dashboard' && section !== 'reports') return;
+    if (section !== 'dashboard') return;
     let live = true; fetchJson<Overview>(`/api/data?view=overview&year=${year}&month=${month}`).then(x => { if (live) setOverview(x); }).catch(e => { if (live) setError(e.message); });
+    return () => { live = false; };
+  }, [section, year, month, revision]);
+  useEffect(() => {
+    if (section !== 'reports') return;
+    let live = true;
+    fetchJson<MonthlyReport>(`/api/data?view=report&year=${year}&month=${month}`).then(data => {
+      if (live) setReport({ key: `${year}-${month}-${revision}`, data });
+    }).catch(e => { if (live) setError(e.message); });
     return () => { live = false; };
   }, [section, year, month, revision]);
   useEffect(() => {
@@ -256,12 +266,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
             {transactions && <><TransactionList rows={transactions.rows} nameOf={nameOf} money={money} onEdit={openEdit} onDelete={async t => { if (confirm(`Delete “${t.description || 'this transaction'}”?`)) await mutate({ action: 'transaction.delete', id: t.id }); }}/><div className="pagination"><span>Page {transactions.page} of {Math.max(1, Math.ceil(transactions.total/25))}</span><div><button className="icon-button" disabled={transactions.page <= 1} onClick={() => setFilters({ ...filters, page: String(transactions.page - 1) })}><ChevronLeft size={18}/></button><button className="icon-button" disabled={transactions.page * 25 >= transactions.total} onClick={() => setFilters({ ...filters, page: String(transactions.page + 1) })}><ChevronRight size={18}/></button></div></div></>}
           </div>
         </>}
-        {section === 'reports' && <><PageHeading eyebrow="INSIGHTS" title="Reports" description="Spot patterns and see how each month compares." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
-          {overview ? <div className="report-stack"><div className="metric-grid"><Metric label="Income" value={money(overview.summary.income)} icon={<ArrowDownLeft size={20}/>} color="green" amountTone="income"/><Metric label="Expenses" value={money(overview.summary.expenses)} icon={<ArrowUpRight size={20}/>} color="coral" amountTone="expense"/><Metric label="Savings" value={money(overview.summary.savings)} icon={<Wallet size={20}/>} color="blue"/></div>
-            <div className="panel chart-panel"><PanelHead title="Monthly movement" subtitle={`Income and expenses across ${year}`}/><TrendChart rows={overview.months} money={money}/></div>
-            <div className="dashboard-grid lower"><BreakdownPanel title="Category breakdown" subtitle={`${months[month-1]} ${year}`} kind="category" rows={overview.categories} totalExpenses={overview.summary.expenses} name={id => nameOf('categories', id)} money={money}/><BreakdownPanel title="By payment method" subtitle={`${months[month-1]} ${year}`} kind="payment" rows={overview.methods} totalExpenses={overview.summary.expenses} name={id => nameOf('payment_methods', id)} money={money}/></div>
-            <div className="panel chart-panel"><div className="panel-title-row report-chart-heading"><PanelHead title="Month by month" subtitle={`${reportMetric === 'both' ? 'Income and expenses' : reportMetric === 'income' ? 'Income' : 'Expenses'} across ${year}`}/><div className="report-metric-switch" role="group" aria-label="Month by month chart metric"><button type="button" className={reportMetric === 'expenses' ? 'active expenses' : ''} aria-pressed={reportMetric === 'expenses'} onClick={() => setReportMetric('expenses')}>Expenses</button><button type="button" className={reportMetric === 'income' ? 'active income' : ''} aria-pressed={reportMetric === 'income'} onClick={() => setReportMetric('income')}>Income</button><button type="button" className={reportMetric === 'both' ? 'active both' : ''} aria-pressed={reportMetric === 'both'} onClick={() => setReportMetric('both')}>Both</button></div></div><MonthlyBarChart rows={overview.months} metric={reportMetric} money={money}/></div>
-          </div> : <Loading/>}</>}
+        {section === 'reports' && <ReportsPage year={year} month={month} data={report?.key === `${year}-${month}-${revision}` ? report.data : null} meta={meta} money={money} setYear={changeYear} setMonth={changeMonth} shiftMonth={shiftMonth}/>}
         {section === 'calendar' && <><PageHeading eyebrow="DAILY VIEW" title="Financial calendar" description="See the rhythm of your daily income and spending." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
           {calendar ? <><div className="calendar-layout"><div className="panel calendar-panel"><div className="calendar-weekdays">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x => <span key={x}>{x}</span>)}</div><div className="calendar-grid">{calendarCells(year,month).map((day,i) => {
             if (!day) return <div className="calendar-cell empty" key={i}/>;
@@ -323,27 +328,6 @@ function IncomeExpenseChart({ rows, money, mode }: { rows: Overview['months']; m
   return <div className="income-expense-chart">
     <div className="chart-wrap">{mode === 'line' ? <ResponsiveContainer width="100%" height="100%"><LineChart data={data} margin={{ top: 10, right: 8, left: -8, bottom: 0 }}>{axis}<Line type="monotone" dataKey="income" name="Income" stroke="var(--green)" strokeWidth={3} dot={false} activeDot={{ r: 5 }}/><Line type="monotone" dataKey="expenses" name="Expenses" stroke="var(--coral)" strokeWidth={3} dot={false} activeDot={{ r: 5 }}/></LineChart></ResponsiveContainer> : <ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{ top: 10, right: 8, left: -8, bottom: 0 }} barGap={3}>{axis}<Bar dataKey="income" name="Income" fill="var(--green)" radius={[5, 5, 0, 0]} maxBarSize={42}/><Bar dataKey="expenses" name="Expenses" fill="var(--coral)" radius={[5, 5, 0, 0]} maxBarSize={42}/></BarChart></ResponsiveContainer>}</div>
     <div className="chart-legend"><span><i className="dot green-dot"/> Income</span><span><i className="dot coral-dot"/> Expenses</span></div>
-  </div>;
-}
-function TrendChart({ rows, money }: { rows: Overview['months']; money: (v:number)=>string }) {
-  const data = rows.map(row => ({ name: months[row.month - 1].slice(0, 3), income: row.income / 100, spending: row.expenses / 100 }));
-  return <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{ top: 10, right: 8, left: -8, bottom: 0 }}>
-    <defs><linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--green)" stopOpacity={0.22}/><stop offset="100%" stopColor="var(--green)" stopOpacity={0}/></linearGradient><linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--coral)" stopOpacity={0.18}/><stop offset="100%" stopColor="var(--coral)" stopOpacity={0}/></linearGradient></defs>
-    <CartesianGrid strokeDasharray="3 4" vertical={false} stroke="var(--border)"/><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 12 }} dy={10}/><YAxis width={72} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 11 }} tickFormatter={value => money(Math.round(Number(value) * 100)).replace(/\.00$/, '')}/><Tooltip formatter={value => money(Math.round(Number(value ?? 0) * 100))} contentStyle={{ borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}/><Area type="monotone" dataKey="income" stroke="var(--green)" strokeWidth={2.5} fill="url(#incomeFill)" name="Income"/><Area type="monotone" dataKey="spending" stroke="var(--coral)" strokeWidth={2.5} fill="url(#spendFill)" name="Expenses"/>
-  </AreaChart></ResponsiveContainer><div className="chart-legend"><span><i className="dot green-dot"/> Income</span><span><i className="dot coral-dot"/> Expenses</span></div></div>;
-}
-function MonthlyBarChart({ rows, metric, money }: { rows: Overview['months']; metric: 'income' | 'expenses' | 'both'; money: (v:number)=>string }) {
-  const data = rows.map(row => ({ name: months[row.month-1].slice(0, 3), income: row.income / 100, expenses: row.expenses / 100 }));
-  const description = rows.map(row => `${months[row.month-1]} ${metric === 'both' ? `income ${money(row.income)}, expenses ${money(row.expenses)}` : money(row[metric])}`).join(', ');
-  return <div className="chart-wrap" role="img" aria-label={`Monthly ${metric}: ${description}`}>
-    <ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{ top: 10, right: 8, left: -8, bottom: 0 }} barGap={2}>
-      <CartesianGrid strokeDasharray="3 4" vertical={false} stroke="var(--border)"/>
-      <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 12 }} dy={10}/>
-      <YAxis width={72} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 11 }} tickFormatter={value => money(Math.round(Number(value) * 100)).replace(/\.00$/, '')}/>
-      <Tooltip formatter={value => money(Math.round(Number(value ?? 0) * 100))} contentStyle={{ borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }} cursor={{ fill: 'var(--surface-soft)' }}/>
-      {metric !== 'income' && <Bar dataKey="expenses" name="Expenses" fill="var(--coral)" radius={[5, 5, 0, 0]} maxBarSize={42}/>}
-      {metric !== 'expenses' && <Bar dataKey="income" name="Income" fill="var(--green)" radius={[5, 5, 0, 0]} maxBarSize={42}/>}
-    </BarChart></ResponsiveContainer>
   </div>;
 }
 type BreakdownRow = { id: string; amount: number };

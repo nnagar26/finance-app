@@ -79,3 +79,70 @@ export function convertMinor(minor: number, rate: string): number {
   if (result > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('Converted amount is too large.');
   return Number(result);
 }
+
+export type ReportGroup = { id: string | null; amount: number; count: number };
+export type ReportDay = { date: string; day: number; income: number; expenses: number };
+export type MonthlyReport = {
+  summary: Totals;
+  previous: Totals;
+  previousYear: number;
+  previousMonth: number;
+  days: ReportDay[];
+  categories: ReportGroup[];
+  methods: ReportGroup[];
+  accounts: ReportGroup[];
+};
+
+function group(rows: Transaction[], key: 'category_id' | 'payment_method_id' | 'account_id'): ReportGroup[] {
+  const groups = new Map<string | null, ReportGroup>();
+  for (const row of rows) {
+    const id = row[key] ?? null;
+    const entry = groups.get(id) ?? { id, amount: 0, count: 0 };
+    entry.amount += reportingAmount(row);
+    entry.count += 1;
+    groups.set(id, entry);
+  }
+  return [...groups.values()].sort((a, b) => b.amount - a.amount || b.count - a.count);
+}
+
+export function monthlyReport(rows: Transaction[], year: number, month: number): MonthlyReport {
+  if (!Number.isInteger(year) || year < 1900 || year > 2200 || !Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error('Choose a valid report month and year.');
+  }
+  const prefix = `${year}-${String(month).padStart(2, '0')}`;
+  const previousDate = new Date(Date.UTC(year, month - 2, 1));
+  const previousYear = previousDate.getUTCFullYear();
+  const previousMonth = previousDate.getUTCMonth() + 1;
+  const previousPrefix = `${previousYear}-${String(previousMonth).padStart(2, '0')}`;
+  const selected = rows.filter(row => row.transaction_date.startsWith(prefix));
+  const previous = rows.filter(row => row.transaction_date.startsWith(previousPrefix));
+  const days = Array.from({ length: new Date(Date.UTC(year, month, 0)).getUTCDate() }, (_, index) => ({
+    date: `${prefix}-${String(index + 1).padStart(2, '0')}`,
+    day: index + 1,
+    income: 0,
+    expenses: 0,
+  }));
+  const expenses: Transaction[] = [];
+  const income: Transaction[] = [];
+  for (const row of selected) {
+    const day = days[Number(row.transaction_date.slice(8, 10)) - 1];
+    const effect = effectOf(row);
+    if (effect === 'expense') {
+      expenses.push(row);
+      if (day) day.expenses += reportingAmount(row);
+    } else if (effect === 'income') {
+      income.push(row);
+      if (day) day.income += reportingAmount(row);
+    }
+  }
+  return {
+    summary: totals(selected),
+    previous: totals(previous),
+    previousYear,
+    previousMonth,
+    days,
+    categories: group(expenses, 'category_id'),
+    methods: group(expenses, 'payment_method_id'),
+    accounts: group(income, 'account_id'),
+  };
+}

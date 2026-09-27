@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { breakdown, byMonth, localDate, totals, weekBounds } from './finance';
+import { breakdown, byMonth, localDate, monthlyReport, totals, weekBounds } from './finance';
 import { csvCell } from './csv';
 import { applyRate, fetchHistoricalRate, isSupportedCurrency, rateKey } from './exchange-rates';
 import type { ExchangeRate, LegacyTransactionType, Meta, RecurringRule, ReferenceItem, Transaction } from './types';
@@ -236,6 +236,12 @@ export async function localView(params: URLSearchParams): Promise<unknown> {
     return { summary: totals(selected), months: byMonth(rows, year),
       categories: breakdown(selected, 'category_id'), methods: breakdown(selected, 'payment_method_id'),
       recent: selected.slice(0, 12) };
+  }
+  if (view === 'report') {
+    const now = new Date();
+    const year = Number(params.get('year') || now.getFullYear());
+    const month = Number(params.get('month') || now.getMonth() + 1);
+    return monthlyReport(rows, year, month);
   }
   if (view === 'calendar') {
     const year = Number(params.get('year'));

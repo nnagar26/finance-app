@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { serverSupabase } from '@/lib/supabase-server';
-import { breakdown, byMonth, localDate, totals, weekBounds } from '@/lib/finance';
+import { breakdown, byMonth, localDate, monthlyReport, totals, weekBounds } from '@/lib/finance';
 import type { Transaction } from '@/lib/types';
 import { applyRate, rateKey } from '@/lib/exchange-rates';
 import { isLocalMode } from '@/lib/local-mode';
@@ -118,6 +118,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ summary: totals(selected), months: byMonth(rows, year),
         categories: breakdown(selected, 'category_id'), methods: breakdown(selected, 'payment_method_id'),
         recent: selected.slice(0, 12) });
+    }
+    if (view === 'report') {
+      const now = new Date();
+      const year = Number(params.get('year') || now.getFullYear());
+      const month = Number(params.get('month') || now.getMonth() + 1);
+      return NextResponse.json(monthlyReport(rows, year, month));
     }
     if (view === 'calendar') {
       const year = Number(params.get('year')); const month = Number(params.get('month'));
