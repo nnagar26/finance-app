@@ -7,6 +7,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, Res
 import { ArrowDownLeft, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Download, LayoutDashboard, ListFilter, LogOut, Menu, Moon, MoreHorizontal, Plus, Repeat2, Search, Settings2, Sun, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
 import { formatMoney, localDate, totals } from '@/lib/finance';
 import { expensePercent, pieBreakdown } from '@/lib/breakdown-display';
+import { greetingFor } from '@/lib/greeting';
 import type { Meta, Transaction, RecurringRule } from '@/lib/types';
 import { SUPPORTED_CURRENCIES } from '@/lib/exchange-rates';
 import TransactionModal from './transaction-modal';
@@ -52,6 +53,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [profileName, setProfileName] = useState('');
+  const [greeting, setGreeting] = useState('');
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const currency = meta?.settings.currency_code ?? 'CAD';
   const themePreference = meta?.settings.theme;
@@ -117,6 +119,13 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
     media.addEventListener('change', updateViewport);
     return () => media.removeEventListener('change', updateViewport);
   }, []);
+  useEffect(() => {
+    if (section !== 'dashboard') return;
+    const updateGreeting = () => setGreeting(greetingFor(new Date(), meta?.settings.time_zone ?? 'America/Toronto'));
+    updateGreeting();
+    const timer = window.setInterval(updateGreeting, 60_000);
+    return () => window.clearInterval(timer);
+  }, [section, meta?.settings.time_zone]);
 
   function openMobileMenu() { setMobileMenu(true); }
   function closeMobileMenu() {
@@ -199,8 +208,9 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
         {localMode && <div className="notice">Local mode · Data is saved in this project’s .local-data folder on this laptop.</div>}
         {error && <div className="error-box page-error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
         {section === 'dashboard' && <>
+          {greeting && <div className="dashboard-greeting">{greeting}</div>}
           <PageHeading eyebrow="OVERVIEW" title="Your financial picture" description="A clear view of what came in, what went out, and what stayed." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
-          {overview ? <><div className="metric-grid"><Metric label="Total income" value={money(overview.summary.income)} icon={<ArrowDownLeft size={20}/>} color="green" detail="Money in this month"/><Metric label="Total expenses" value={money(overview.summary.expenses)} icon={<ArrowUpRight size={20}/>} color="coral" detail="Money out this month"/><Metric label="Net savings" value={money(overview.summary.savings)} icon={<Wallet size={20}/>} color="blue" detail="Income minus expenses"/></div>
+          {overview ? <><div className="metric-grid"><Metric label="Income this month" value={money(overview.summary.income)} icon={<ArrowDownLeft size={20}/>} color="green" detail="Money in this month"/><Metric label="Expenses this month" value={money(overview.summary.expenses)} icon={<ArrowUpRight size={20}/>} color="coral" detail="Money out this month"/><Metric label="Net savings" value={money(overview.summary.savings)} icon={<Wallet size={20}/>} color="blue" detail="Income minus expenses"/></div>
             <div className="dashboard-grid"><div className="panel chart-panel"><PanelHead title="Income & expenses" subtitle={`${year} at a glance`}/><TrendChart rows={overview.months} money={money}/></div><BreakdownPanel title="Where it went" subtitle="Spending by category" kind="category" rows={overview.categories} totalExpenses={overview.summary.expenses} name={id => nameOf('categories', id)} money={money}/></div>
             <div className="dashboard-grid lower"><BreakdownPanel title="Payment methods" subtitle="Net spending this month" kind="payment" rows={overview.methods} totalExpenses={overview.summary.expenses} name={id => nameOf('payment_methods', id)} money={money}/><div className="panel"><div className="panel-title-row"><PanelHead title="Recent activity" subtitle="Latest this month"/><Link href="/transactions" className="text-button">View all <ArrowUpRight size={15}/></Link></div><TransactionList rows={overview.recent} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div>
           </> : <Loading/>}

@@ -83,3 +83,4 @@ html[data-theme=dark] .auth-login-page{background:#eef0f2;color:#06070a}
 .reference-row .reference-label{display:inline-flex;align-items:center;gap:8px;min-width:0}
 .reference-label>svg{flex-shrink:0;color:var(--muted)}
 .reference-label>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-greeting{margin-bottom:8px;color:var(--accent);font-size:13px;font-weight:700}
