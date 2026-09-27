@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDownLeft, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Download, LayoutDashboard, ListFilter, LogOut, Menu, Moon, MoreHorizontal, Plus, Repeat2, Search, Settings2, Sun, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
 import { formatMoney, localDate, totals } from '@/lib/finance';
+import { expensePercent, pieBreakdown } from '@/lib/breakdown-display';
 import type { Meta, Transaction, RecurringRule } from '@/lib/types';
 import { SUPPORTED_CURRENCIES } from '@/lib/exchange-rates';
 import TransactionModal from './transaction-modal';
@@ -199,8 +200,8 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
         {section === 'dashboard' && <>
           <PageHeading eyebrow="OVERVIEW" title="Your financial picture" description="A clear view of what came in, what went out, and what stayed." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
           {overview ? <><div className="metric-grid"><Metric label="Total income" value={money(overview.summary.income)} icon={<ArrowDownLeft size={20}/>} color="green" detail="Money in this month"/><Metric label="Total expenses" value={money(overview.summary.expenses)} icon={<ArrowUpRight size={20}/>} color="coral" detail="Money out this month"/><Metric label="Net savings" value={money(overview.summary.savings)} icon={<Wallet size={20}/>} color="blue" detail="Income minus expenses"/></div>
-            <div className="dashboard-grid"><div className="panel chart-panel"><PanelHead title="Income & expenses" subtitle={`${year} at a glance`}/><TrendChart rows={overview.months} money={money}/></div><div className="panel"><PanelHead title="Where it went" subtitle="Spending by category"/><Breakdown rows={overview.categories} name={id => nameOf('categories', id)} money={money}/></div></div>
-            <div className="dashboard-grid lower"><div className="panel"><PanelHead title="Payment methods" subtitle="Net spending this month"/><Breakdown rows={overview.methods} name={id => nameOf('payment_methods', id)} money={money}/></div><div className="panel"><div className="panel-title-row"><PanelHead title="Recent activity" subtitle="Latest this month"/><Link href="/transactions" className="text-button">View all <ArrowUpRight size={15}/></Link></div><TransactionList rows={overview.recent} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div>
+            <div className="dashboard-grid"><div className="panel chart-panel"><PanelHead title="Income & expenses" subtitle={`${year} at a glance`}/><TrendChart rows={overview.months} money={money}/></div><BreakdownPanel title="Where it went" subtitle="Spending by category" rows={overview.categories} totalExpenses={overview.summary.expenses} name={id => nameOf('categories', id)} money={money}/></div>
+            <div className="dashboard-grid lower"><BreakdownPanel title="Payment methods" subtitle="Net spending this month" rows={overview.methods} totalExpenses={overview.summary.expenses} name={id => nameOf('payment_methods', id)} money={money}/><div className="panel"><div className="panel-title-row"><PanelHead title="Recent activity" subtitle="Latest this month"/><Link href="/transactions" className="text-button">View all <ArrowUpRight size={15}/></Link></div><TransactionList rows={overview.recent} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div>
           </> : <Loading/>}
         </>}
         {section === 'transactions' && <>
@@ -221,7 +222,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
         {section === 'reports' && <><PageHeading eyebrow="INSIGHTS" title="Reports" description="Spot patterns and see how each month compares." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
           {overview ? <div className="report-stack"><div className="metric-grid"><Metric label="Income" value={money(overview.summary.income)} icon={<ArrowDownLeft size={20}/>} color="green"/><Metric label="Net spending" value={money(overview.summary.netSpending)} icon={<ArrowUpRight size={20}/>} color="coral"/><Metric label="Savings" value={money(overview.summary.savings)} icon={<Wallet size={20}/>} color="blue"/></div>
             <div className="panel chart-panel"><PanelHead title="Monthly movement" subtitle={`Income and net spending across ${year}`}/><TrendChart rows={overview.months} money={money}/></div>
-            <div className="dashboard-grid lower"><div className="panel"><PanelHead title="Category breakdown" subtitle={`${months[month-1]} ${year}`}/><Breakdown rows={overview.categories} name={id => nameOf('categories', id)} money={money}/></div><div className="panel"><PanelHead title="By payment method" subtitle={`${months[month-1]} ${year}`}/><Breakdown rows={overview.methods} name={id => nameOf('payment_methods', id)} money={money}/></div></div>
+            <div className="dashboard-grid lower"><BreakdownPanel title="Category breakdown" subtitle={`${months[month-1]} ${year}`} rows={overview.categories} totalExpenses={overview.summary.expenses} name={id => nameOf('categories', id)} money={money}/><BreakdownPanel title="By payment method" subtitle={`${months[month-1]} ${year}`} rows={overview.methods} totalExpenses={overview.summary.expenses} name={id => nameOf('payment_methods', id)} money={money}/></div>
             <div className="panel chart-panel"><div className="panel-title-row report-chart-heading"><PanelHead title="Month by month" subtitle={`${reportMetric === 'both' ? 'Income and expenses' : reportMetric === 'income' ? 'Income' : 'Expenses'} across ${year}`}/><div className="report-metric-switch" role="group" aria-label="Month by month chart metric"><button type="button" className={reportMetric === 'expenses' ? 'active expenses' : ''} aria-pressed={reportMetric === 'expenses'} onClick={() => setReportMetric('expenses')}>Expenses</button><button type="button" className={reportMetric === 'income' ? 'active income' : ''} aria-pressed={reportMetric === 'income'} onClick={() => setReportMetric('income')}>Income</button><button type="button" className={reportMetric === 'both' ? 'active both' : ''} aria-pressed={reportMetric === 'both'} onClick={() => setReportMetric('both')}>Both</button></div></div><MonthlyBarChart rows={overview.months} metric={reportMetric} money={money}/></div>
           </div> : <Loading/>}</>}
         {section === 'calendar' && <><PageHeading eyebrow="DAILY VIEW" title="Spending calendar" description="See the rhythm of your everyday spending." right={<MonthPicker year={year} month={month} setYear={changeYear} setMonth={changeMonth} shift={shiftMonth}/>}/>
@@ -263,7 +264,41 @@ function MonthlyBarChart({ rows, metric, money }: { rows: Overview['months']; me
     </BarChart></ResponsiveContainer>
   </div>;
 }
-function Breakdown({ rows, name, money }: { rows: { id:string; amount:number }[]; name:(id:string)=>string; money:(v:number)=>string }) { const visible = rows.filter(x => x.amount !== 0).slice(0,8); const max = Math.max(...visible.map(x => Math.abs(x.amount)),1); return visible.length ? <div className="breakdown">{visible.map((x,i) => <div className="breakdown-row" key={x.id}><div className="breakdown-line"><span><i className={`category-dot dot-${i%5}`}/>{name(x.id)}</span><strong>{money(x.amount)}</strong></div><div className="bar-track"><div style={{ width: `${Math.abs(x.amount)/max*100}%`, background: `var(--chart-${i%5})` }}/></div></div>)}</div> : <Empty title="No spending yet" description="Your breakdown will appear as transactions come in."/>; }
+type BreakdownRow = { id: string; amount: number };
+type BreakdownProps = { rows: BreakdownRow[]; totalExpenses: number; name: (id: string) => string; money: (value: number) => string };
+function percentLabel(amount: number, totalExpenses: number) { return `${expensePercent(amount, totalExpenses).toFixed(1)}%`; }
+function BreakdownPanel({ title, subtitle, rows, totalExpenses, name, money }: BreakdownProps & { title: string; subtitle: string }) {
+  const [view, setView] = useState<'bars' | 'pie'>('bars');
+  return <div className="panel breakdown-panel">
+    <div className="panel-title-row breakdown-heading"><PanelHead title={title} subtitle={subtitle}/><div className="breakdown-switch" role="group" aria-label={`${title} chart view`}>
+      <button type="button" aria-pressed={view === 'bars'} className={view === 'bars' ? 'active' : ''} onClick={() => setView('bars')}>Bars</button>
+      <button type="button" aria-pressed={view === 'pie'} className={view === 'pie' ? 'active' : ''} onClick={() => setView('pie')}>Pie</button>
+    </div></div>
+    {view === 'bars' ? <BreakdownBars rows={rows} totalExpenses={totalExpenses} name={name} money={money}/> : <BreakdownPie rows={rows} totalExpenses={totalExpenses} name={name} money={money}/>}
+  </div>;
+}
+function BreakdownBars({ rows, totalExpenses, name, money }: BreakdownProps) {
+  const positive = rows.filter(row => row.amount > 0);
+  const visible = positive.slice(0, 8);
+  const max = Math.max(...visible.map(row => row.amount), 1);
+  return visible.length ? <div className="breakdown">{visible.map((row, index) => <div className="breakdown-row" key={row.id}>
+    <div className="breakdown-line"><span><i className={`category-dot dot-${index % 5}`}/>{name(row.id)}</span><strong>{money(row.amount)} <small>{percentLabel(row.amount, totalExpenses)}</small></strong></div>
+    <div className="bar-track"><div style={{ width: `${row.amount / max * 100}%`, background: `var(--chart-${index % 5})` }}/></div>
+  </div>)}{positive.length > 8 && <p className="breakdown-note">Showing 8 of {positive.length} groups</p>}</div> : <Empty title="No spending yet" description="Your breakdown will appear as transactions come in."/>;
+}
+function BreakdownPie({ rows, totalExpenses, name, money }: BreakdownProps) {
+  const slices = pieBreakdown(rows);
+  if (!slices.length) return <Empty title="No spending yet" description="Your breakdown will appear as transactions come in."/>;
+  const label = (id: string) => id === 'other-groups' ? 'Other groups' : name(id);
+  return <div className="breakdown-pie">
+    <div className="pie-chart" role="img" aria-label={slices.map(row => `${label(row.id)}: ${money(row.amount)}, ${percentLabel(row.amount, totalExpenses)} of monthly expenses`).join('; ')}>
+      <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={slices} dataKey="amount" nameKey="id" cx="50%" cy="50%" outerRadius="85%" stroke="var(--surface)" strokeWidth={2} isAnimationActive={false}>
+        {slices.map((row, index) => <Cell key={row.id} fill={`var(--chart-${index % 5})`}/>)}
+      </Pie><Tooltip formatter={value => `${money(Number(value))} · ${percentLabel(Number(value), totalExpenses)}`} labelFormatter={value => label(String(value))} contentStyle={{ borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}/></PieChart></ResponsiveContainer>
+    </div>
+    <div className="pie-legend">{slices.map((row, index) => <div className="pie-legend-row" key={row.id}><span><i className={`category-dot dot-${index % 5}`}/>{label(row.id)}</span><strong>{money(row.amount)} <small>{percentLabel(row.amount, totalExpenses)}</small></strong></div>)}</div>
+  </div>;
+}
 function TransactionList({ rows, nameOf, money, compact, onEdit, onDelete }: { rows:Transaction[]; nameOf:(entity:'categories'|'accounts'|'payment_methods'|'tags',id:string|null)=>string; money:(v:number)=>string; compact?:boolean; onEdit:(t:Transaction)=>void; onDelete?:(t:Transaction)=>void }) { return rows.length ? <div className={compact ? 'transaction-list compact' : 'transaction-list'}>{rows.map(t => { const incoming = t.type === 'income' || t.type === 'other' && t.other_effect === 'income'; const neutral = t.type === 'other' && t.other_effect === 'neutral'; const reporting = t.reporting_amount_minor ?? t.amount_minor; const converted = t.reporting_currency_code && t.reporting_currency_code !== t.currency_code; return <div className="transaction-row" key={t.id}><div className={`transaction-icon ${incoming ? 'incoming' : neutral ? 'neutral' : 'outgoing'}`}>{incoming ? <ArrowDownLeft size={18}/> : neutral ? <MoreHorizontal size={18}/> : <ArrowUpRight size={18}/>}</div><div className="transaction-main"><strong>{t.description || nameOf('categories',t.category_id)}</strong><span>{nameOf('categories',t.category_id)} · {t.transaction_date}{!compact && t.payment_method_id ? ` · ${nameOf('payment_methods',t.payment_method_id)}` : ''}</span></div><div className="transaction-amount"><strong className={incoming ? 'positive' : neutral ? '' : 'negative'}>{neutral ? '' : incoming ? '+' : '-'}{money(reporting)}</strong>{converted && <span>{formatMoney(t.amount_minor, t.currency_code)} original</span>}{!compact && <span>{t.type}</span>}</div><div className="row-buttons"><button className="icon-button" aria-label="Edit transaction" onClick={() => onEdit(t)}><MoreHorizontal size={18}/></button>{onDelete && <button className="icon-button danger" aria-label="Delete transaction" onClick={() => onDelete(t)}><Trash2 size={16}/></button>}</div></div>; })}</div> : <Empty title="No transactions found" description="Add one to get started, or adjust your filters."/>; }
 function calendarCells(year: number, month: number) { const first = new Date(Date.UTC(year,month-1,1)); const offset = (first.getUTCDay()+6)%7; const days = new Date(Date.UTC(year,month,0)).getUTCDate(); const cells:(string|null)[] = Array(offset).fill(null); for(let d=1;d<=days;d++) cells.push(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`); while(cells.length%7) cells.push(null); return cells; }
 

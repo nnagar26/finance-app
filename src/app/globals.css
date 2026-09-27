@@ -61,3 +61,19 @@ html[data-theme=dark] .auth-login-page{background:#eef0f2;color:#06070a}
 .auth-login-page .auth-notice{margin-bottom:15px;padding:11px 12px;border:1px solid #cce4d8;border-radius:9px;background:#eff8f3;color:#225943;font-size:12px;line-height:1.5}
 .auth-back-button{display:block;margin:17px auto 0}
 .auth-email-form input:focus-visible,.auth-submit-button:focus-visible,.auth-google-button:focus-visible,.auth-text-button:focus-visible,.auth-back-button:focus-visible{outline:3px solid #517c9c;outline-offset:3px}
+
+.breakdown-panel{padding:23px;min-width:0}
+.breakdown-heading{gap:12px;flex-wrap:wrap}
+.breakdown-heading .panel-head{margin-bottom:18px}
+.breakdown-switch{display:flex;gap:3px;padding:3px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);margin-bottom:18px}
+.breakdown-switch button{border:0;border-radius:6px;background:transparent;color:var(--muted);padding:6px 10px;font-size:11px;font-weight:700}
+.breakdown-switch button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.breakdown-switch button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.breakdown-line strong,.pie-legend-row strong{white-space:nowrap}
+.breakdown-line small,.pie-legend-row small{margin-left:5px;color:var(--muted);font-size:10px;font-weight:650}
+.breakdown-note{margin:0;color:var(--muted);font-size:10px}
+.breakdown-pie{display:flex;flex-direction:column;align-items:center;gap:14px}
+.pie-chart{width:min(100%,230px);height:210px}
+.pie-legend{width:100%;display:flex;flex-direction:column;gap:10px}
+.pie-legend-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px}
+.pie-legend-row>span{min-width:0;display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
