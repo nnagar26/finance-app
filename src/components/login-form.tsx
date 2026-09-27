@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ChartNoAxesCombined, ListPlus, LockKeyhole } from 'lucide-react';
+import { ArrowRight, ChartNoAxesCombined, Eye, EyeOff, ListPlus, LockKeyhole } from 'lucide-react';
 import Image from 'next/image';
 import { browserSupabase } from '@/lib/supabase-browser';
 import styles from './login-form.module.css';
@@ -15,6 +15,8 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(authError ? 'The sign-in link could not be completed. Please try again.' : '');
   const [notice, setNotice] = useState('');
@@ -23,6 +25,8 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
     setMode(next);
     setPassword('');
     setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setError('');
     setNotice('');
   }
@@ -125,14 +129,27 @@ export default function LoginForm({ authError = false }: { authError?: boolean }
       </div>
       {error && <div className="error-box auth-error" role="alert">{error}</div>}
       {notice && <div className="auth-notice" role="status">{notice}</div>}
-      <form className="auth-email-form" onSubmit={submitEmail}>
-        <label htmlFor="auth-email">Email address</label>
-        <input id="auth-email" type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required disabled={busy} />
-        {mode !== 'reset' && <>
-          <div className="auth-label-row"><label htmlFor="auth-password">Password</label>{mode === 'login' && <button type="button" className="auth-text-button" onClick={() => changeMode('reset')} disabled={busy}>Forgot password?</button>}</div>
-          <input id="auth-password" type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 8 : undefined} required disabled={busy} placeholder={mode === 'signup' ? 'At least 8 characters' : 'Enter your password'} />
-        </>}
-        {mode === 'signup' && <><label htmlFor="auth-confirm-password">Confirm password</label><input id="auth-confirm-password" type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} required disabled={busy} placeholder="Repeat your password" /></>}
+      <form className={`auth-email-form ${styles.form}`} onSubmit={submitEmail}>
+        <div className={styles.field}>
+          <label htmlFor="auth-email">Email address</label>
+          <input id="auth-email" type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required disabled={busy} />
+        </div>
+        {mode !== 'reset' && <div className={`${styles.passwordFields} ${mode === 'signup' ? styles.signupPasswordFields : ''}`}>
+          <div className={styles.field}>
+            <div className="auth-label-row"><label htmlFor="auth-password">Password</label>{mode === 'login' && <button type="button" className="auth-text-button" onClick={() => changeMode('reset')} disabled={busy}>Forgot password?</button>}</div>
+            <div className={styles.passwordControl}>
+              <input id="auth-password" type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 8 : undefined} required disabled={busy} placeholder={mode === 'signup' ? 'At least 8 characters' : 'Enter your password'} />
+              <button type="button" className={styles.visibilityButton} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} disabled={busy}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button>
+            </div>
+          </div>
+          {mode === 'signup' && <div className={styles.field}>
+            <label htmlFor="auth-confirm-password">Confirm password</label>
+            <div className={styles.passwordControl}>
+              <input id="auth-confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} required disabled={busy} placeholder="Repeat password" />
+              <button type="button" className={styles.visibilityButton} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} aria-pressed={showConfirmPassword} onClick={() => setShowConfirmPassword(value => !value)} disabled={busy}>{showConfirmPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button>
+            </div>
+          </div>}
+        </div>}
         <button type="submit" className="auth-submit-button" disabled={busy}>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Log in with email'}<ArrowRight size={17} aria-hidden="true" /></button>
       </form>
       {mode === 'reset' ? <button type="button" className="auth-back-button" onClick={() => changeMode('login')}>Back to log in</button> : <>
