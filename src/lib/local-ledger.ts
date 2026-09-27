@@ -337,6 +337,17 @@ export async function localMutation(body: unknown): Promise<unknown> {
       rule.active = z.boolean().parse(input.active);
       return null;
     }
+    if (input.action === 'recurring.delete') {
+      const ruleId = id.parse(input.id);
+      if (!ledger.recurring_rules.some(item => item.id === ruleId)) throw new Error('Recurring item not found.');
+      const occurrenceIds = new Set(ledger.occurrences.filter(item => item.rule_id === ruleId).map(item => item.id));
+      ledger.transactions.forEach(item => {
+        if (item.recurring_occurrence_id && occurrenceIds.has(item.recurring_occurrence_id)) item.recurring_occurrence_id = null;
+      });
+      ledger.occurrences = ledger.occurrences.filter(item => item.rule_id !== ruleId);
+      ledger.recurring_rules = ledger.recurring_rules.filter(item => item.id !== ruleId);
+      return null;
+    }
     if (input.action === 'recurring.review') {
       const ruleId = id.parse(input.id);
       const choice = z.enum(['post', 'skip']).parse(input.choice);

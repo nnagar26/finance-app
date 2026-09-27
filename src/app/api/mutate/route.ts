@@ -139,6 +139,10 @@ export async function POST(request: NextRequest) {
       const id = uuid.parse(body.id);
       const { error } = await db.from('recurring_rules').update({ active: Boolean(body.active) }).eq('id', id).eq('owner_id', owner_id);
       if (error) throw error;
+    } else if (action === 'recurring.delete') {
+      const id = uuid.parse(body.id);
+      const { error } = await db.from('recurring_rules').delete().eq('id', id).eq('owner_id', owner_id);
+      if (error) throw error;
     } else if (action === 'recurring.review') {
       const id = uuid.parse(body.id);
       const choice = z.enum(['post', 'skip']).parse(body.choice);
