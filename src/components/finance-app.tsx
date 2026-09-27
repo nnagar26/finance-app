@@ -301,11 +301,15 @@ function BreakdownPie({ rows, totalExpenses, kind, name, money }: BreakdownProps
   const slices = pieBreakdown(rows);
   if (!slices.length) return <Empty title="No spending yet" description="Your breakdown will appear as transactions come in."/>;
   const label = (id: string) => id === 'other-groups' ? 'Other groups' : name(id);
+  const chartSlices = slices.map(row => ({ ...row, displayName: label(row.id) }));
   return <div className="breakdown-pie">
     <div className="pie-chart" role="img" aria-label={slices.map(row => `${label(row.id)}: ${money(row.amount)}, ${percentLabel(row.amount, totalExpenses)} of monthly expenses`).join('; ')}>
-      <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={slices} dataKey="amount" nameKey="id" cx="50%" cy="50%" outerRadius="85%" stroke="var(--surface)" strokeWidth={2} isAnimationActive={false}>
+      <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={chartSlices} dataKey="amount" nameKey="displayName" cx="50%" cy="50%" outerRadius="85%" stroke="var(--surface)" strokeWidth={2} isAnimationActive={false}>
         {slices.map((row, index) => <Cell key={row.id} fill={`var(--chart-${index % 5})`}/>)}
-      </Pie><Tooltip formatter={value => `${money(Number(value))} · ${percentLabel(Number(value), totalExpenses)}`} labelFormatter={value => label(String(value))} contentStyle={{ borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}/></PieChart></ResponsiveContainer>
+      </Pie><Tooltip content={({ active, payload }) => {
+        const slice = payload?.[0]?.payload as (BreakdownRow & { displayName: string }) | undefined;
+        return active && slice ? <div className="pie-tooltip"><strong>{slice.displayName}</strong><span>{money(slice.amount)} · {percentLabel(slice.amount, totalExpenses)}</span></div> : null;
+      }}/></PieChart></ResponsiveContainer>
     </div>
     <div className="pie-legend">{slices.map((row, index) => <div className="pie-legend-row" key={row.id}><span><i className={`category-dot dot-${index % 5}`}/><ReferenceIcon kind={kind} name={label(row.id)} size={15}/>{label(row.id)}</span><strong>{money(row.amount)} <small>{percentLabel(row.amount, totalExpenses)}</small></strong></div>)}</div>
   </div>;
