@@ -246,21 +246,36 @@ html[data-theme=dark] .dashboard-greeting.evening .greeting-icon{color:#b99aff}
 .report-comparison-item>strong{font-size:clamp(20px,2.4vw,30px);font-weight:700;letter-spacing:-.04em;overflow-wrap:anywhere}
 .report-comparison-item>strong.report-income{color:var(--green)}
 .report-comparison-item>strong.report-expense{color:var(--coral)}
-.report-change{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 8px;font-size:11px;color:var(--muted)}
-.report-change strong{color:var(--text);font-size:12px}
+.report-change{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 6px;font-size:11px;color:var(--muted);line-height:1.5}
+.report-change strong{font-size:12px}
+.report-change.favorable strong{color:var(--green)}
+.report-change.unfavorable strong{color:var(--coral)}
+.report-change.quiet{color:var(--muted)}
+.report-comparison-note{margin:20px 0 0;padding:11px 14px;border-radius:9px;background:var(--surface-soft);color:var(--muted);font-size:12px;line-height:1.5}
+.report-chart-context{display:flex;flex-wrap:wrap;gap:8px 20px;margin:-4px 0 14px;font-size:12px;color:var(--muted)}
+.report-chart-context strong{color:var(--text);font-weight:700}
 .report-daily-chart{width:100%;height:290px}
 .report-daily-panel .chart-legend{margin-top:12px}
-.report-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-.report-detail-grid>.report-detail-panel:last-child{grid-column:1/-1}
+.report-section-heading{margin:4px 0 -5px}
+.report-section-heading h2{margin:0 0 5px;font-size:20px;letter-spacing:-.03em}
+.report-section-heading p{margin:0;color:var(--muted);font-size:12px}
+.report-detail-grid{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:20px;align-items:start}
+.report-detail-side{display:grid;gap:20px;min-width:0}
+.report-detail-panel .panel-head h3{margin:0 0 5px;font-size:17px;font-weight:650;letter-spacing:-.025em}
+.report-detail-panel .panel-head p{font-size:12px}
 .report-table-scroll{width:100%;overflow-x:auto}
-.report-table{width:100%;border-collapse:collapse;font-size:12px;text-align:right}
+.report-table{width:100%;border-collapse:collapse;font-size:13px;text-align:right}
 .report-table th,.report-table td{padding:12px 8px;border-top:1px solid var(--border);white-space:nowrap}
 .report-table thead th{padding-top:0;border-top:0;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
 .report-table th:first-child{text-align:left;padding-left:0;white-space:normal;overflow-wrap:anywhere}
 .report-table th:last-child,.report-table td:last-child{padding-right:0}
 .report-table tbody th{font-weight:650}
+.report-share{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.report-share-track{display:block;width:54px;height:4px;border-radius:4px;background:var(--surface-soft);overflow:hidden}
+.report-share-track>span{display:block;height:100%;min-width:2px;border-radius:4px;background:var(--coral)}
+.report-detail-side>.report-detail-panel:last-child .report-share-track>span{background:var(--green)}
 .report-empty{margin:0;padding:26px 8px;text-align:center;color:var(--muted);font-size:13px}
-@media(max-width:850px){.report-detail-grid{grid-template-columns:1fr}.report-detail-grid>.report-detail-panel:last-child{grid-column:auto}}
+@media(max-width:950px){.report-detail-grid{grid-template-columns:1fr}}
 @media(max-width:620px){
   .report-comparison,.report-daily-panel,.report-detail-panel{padding:18px}
   .report-comparison-grid{grid-template-columns:1fr}
@@ -275,4 +290,5 @@ html[data-theme=dark] .dashboard-greeting.evening .greeting-icon{color:#b99aff}
   .report-table tbody th{grid-column:1/-1;padding:0;border:0}
   .report-table tbody td{padding:0;border:0;text-align:left;white-space:normal}
   .report-table tbody td::before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:700}
+  .report-share{align-items:flex-start}
 }
