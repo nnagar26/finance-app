@@ -10,7 +10,7 @@
 .shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  width: min(100%, 1190px);
+  width: min(100%, 1120px);
   min-height: 0;
   overflow: hidden;
   border: 1px solid #e6e8e5;
@@ -103,7 +103,7 @@
   position: relative;
   flex: 1;
   min-height: 190px;
-  max-height: 250px;
+  max-height: 220px;
   margin-top: 18px;
   overflow: hidden;
   border-radius: 16px;
@@ -128,49 +128,49 @@
 .page:global(.auth-login-page) :global(.login-card) {
   justify-self: center;
   width: min(100%, 440px);
-  padding: 16px 30px;
+  padding: 12px 30px;
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
 .page:global(.auth-login-page) :global(.auth-brand) {
-  margin-bottom: 10px;
-}
-
-.page:global(.auth-login-page) :global(.auth-tabs) {
-  margin-bottom: 10px;
-}
-
-.page:global(.auth-login-page) :global(.auth-intro) p {
-  margin-bottom: 10px;
-}
-
-.page:global(.auth-login-page) :global(.auth-divider) {
-  margin: 10px 0;
-}
-
-.page:global(.auth-login-page) :global(.auth-hint) {
-  margin-top: 4px;
-}
-
-.page:global(.auth-login-page) :global(.auth-error) {
   margin-bottom: 8px;
 }
 
+.page:global(.auth-login-page) :global(.auth-tabs) {
+  margin-bottom: 8px;
+}
+
+.page:global(.auth-login-page) :global(.auth-intro) p {
+  margin-bottom: 8px;
+}
+
+.page:global(.auth-login-page) :global(.auth-divider) {
+  margin: 8px 0;
+}
+
+.page:global(.auth-login-page) :global(.auth-hint) {
+  margin-top: 2px;
+}
+
+.page:global(.auth-login-page) :global(.auth-error) {
+  margin-bottom: 6px;
+}
+
 .page:global(.auth-login-page) :global(.auth-foot) {
-  margin-top: 12px;
-  padding-top: 10px;
+  margin-top: 10px;
+  padding-top: 8px;
 }
 
 .form:global(.auth-email-form) {
-  gap: 9px;
+  gap: 7px;
 }
 
 .field {
   display: grid;
   min-width: 0;
-  gap: 5px;
+  gap: 4px;
 }
 
 :global(.auth-email-form) .field input {
@@ -179,7 +179,7 @@
 
 .passwordFields {
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .signupPasswordFields {
@@ -230,7 +230,7 @@
   }
 
   .shell {
-    height: 100%;
+    height: min(650px, calc(100dvh - 32px));
   }
 
   .page:global(.auth-login-page) :global(.login-card) {
