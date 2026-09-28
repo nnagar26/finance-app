@@ -201,8 +201,19 @@ html[data-theme=dark] .dashboard-greeting.evening .greeting-icon{color:#b99aff}
 .calendar-weekday-mobile{display:none}
 
 @media (min-width:781px) and (max-height:700px){
-  .sidebar{height:100dvh;overflow-y:auto;overscroll-behavior:contain}
-  .sidebar-bottom{margin-top:24px}
+.sidebar{height:100dvh;overflow-y:auto;overscroll-behavior:contain}
+.side-nav{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.sidebar .brand,.sidebar .nav-label,.sidebar .sidebar-bottom{flex-shrink:0}
+.sidebar-bottom{margin-top:24px}
+}
+
+.transaction-heading-actions{display:flex;align-items:center;gap:10px}
+@media(max-width:780px){
+  .transactions-page-heading{align-items:flex-start;flex-direction:column}
+  .transactions-page-heading .heading-actions{width:100%}
+  .transaction-heading-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;width:100%}
+  .transaction-heading-actions>button{min-height:44px}
+  .transaction-mobile-add{display:none}
 }
 
 @media(max-width:780px){

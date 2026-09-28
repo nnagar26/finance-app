@@ -3,6 +3,8 @@ import AuthLanding from '@/components/auth-landing';
 import { isLocalMode } from '@/lib/local-mode';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default function SetupPage() {
   if (isLocalMode) redirect('/dashboard');
   if (isConfigured) return <AuthLanding />;

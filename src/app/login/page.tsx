@@ -4,6 +4,8 @@ import LoginForm from '@/components/login-form';
 import { isLocalMode } from '@/lib/local-mode';
 import { accountStatus } from '@/lib/account-deletion';
 
+export const dynamic = 'force-dynamic';
+
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if (isLocalMode) redirect('/dashboard');
   if (!isConfigured) redirect('/setup');

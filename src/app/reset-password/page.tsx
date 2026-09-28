@@ -3,6 +3,8 @@ import { isLocalMode } from '@/lib/local-mode';
 import { isConfigured, serverSupabase } from '@/lib/supabase-server';
 import ResetPasswordForm from '@/components/reset-password-form';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ResetPasswordPage() {
   if (isLocalMode) redirect('/dashboard');
   if (!isConfigured) redirect('/setup');
