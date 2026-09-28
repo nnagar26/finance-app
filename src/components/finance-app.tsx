@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -34,6 +34,10 @@ const months = ['January','February','March','April','May','June','July','August
 const fetchJson = async <T,>(url: string): Promise<T> => { const response = await fetch(url, { cache: 'no-store' }); const json = await response.json(); if (!response.ok) throw new Error(json.error || 'Unable to load data.'); return json as T; };
 const recurringEffect = (rule: RecurringRule) => rule.type === 'other' ? rule.other_effect ?? 'neutral' : rule.type;
 const recurringType = (rule: RecurringRule) => rule.type === 'other' && recurringEffect(rule) === 'neutral' ? 'Other' : recurringEffect(rule) === 'income' ? 'Income' : 'Expense';
+function supportedTimeZones() {
+  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
+  return [...new Set(['UTC', ...(intl.supportedValuesOf?.('timeZone') ?? []), 'America/Toronto'])].sort();
+}
 
 export default function FinanceApp({ section, email, localMode = false }: { section: string; email: string; localMode?: boolean }) {
   const router = useRouter();
@@ -405,6 +409,24 @@ function SettingsPage({ meta, email, localMode, mutate, busy, profileName, onSav
   const [profileError, setProfileError] = useState('');
   const [profileSaved, setProfileSaved] = useState('');
   const [profileBusy, setProfileBusy] = useState(false);
+  const [timeZone, setTimeZone] = useState(meta.settings.time_zone);
+  const [timeZoneSaved, setTimeZoneSaved] = useState('');
+  const [accountProviders, setAccountProviders] = useState<string[]>([]);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const timeZones = useMemo(() => supportedTimeZones(), []);
+  useEffect(() => {
+    if (localMode) return;
+    browserSupabase().auth.getUser().then(({ data: { user } }) => {
+      const providers = user?.app_metadata?.providers;
+      setAccountProviders(Array.isArray(providers) ? providers : user?.app_metadata?.provider ? [user.app_metadata.provider] : []);
+    }).catch(() => {});
+  }, [localMode]);
   async function saveRef(e: React.FormEvent) { e.preventDefault(); try { await mutate({ action: 'reference.save', entity: tab, id: editingRef, name, kind }); setName(''); setEditingRef(null); } catch {} }
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault(); setProfileError(''); setProfileSaved('');
@@ -418,17 +440,51 @@ function SettingsPage({ meta, email, localMode, mutate, busy, profileName, onSav
     try { await onSignOut(); }
     finally { setProfileBusy(false); }
   }
+  async function saveTimeZone(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setTimeZoneSaved('');
+    try { new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date()); }
+    catch { setTimeZoneSaved('Enter a valid IANA time zone, such as America/Toronto.'); return; }
+    try { await mutate({ action: 'settings.save', values: { time_zone: timeZone } }); setTimeZoneSaved('Time zone saved.'); }
+    catch (cause) { setTimeZoneSaved(cause instanceof Error ? cause.message : 'Unable to save time zone.'); }
+  }
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setPasswordError(''); setPasswordMessage('');
+    if (newPassword.length < 8) { setPasswordError('Use at least eight characters for your new password.'); return; }
+    if (newPassword !== confirmPassword) { setPasswordError('The new passwords do not match.'); return; }
+    setPasswordBusy(true);
+    try {
+      const { error: signInError } = await browserSupabase().auth.signInWithPassword({ email, password: currentPassword });
+      if (signInError) throw new Error('Current password is incorrect.');
+      const { error: updateError } = await browserSupabase().auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setPasswordMessage('Password changed successfully.');
+    } catch (cause) { setPasswordError(cause instanceof Error ? cause.message : 'Unable to change your password.'); }
+    finally { setPasswordBusy(false); }
+  }
+  async function sendPasswordReset() {
+    setPasswordError(''); setPasswordMessage(''); setResetBusy(true);
+    try {
+      const { error: resetError } = await browserSupabase().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback` });
+      if (resetError) throw resetError;
+      setPasswordMessage('If this email can receive a reset link, one is on its way.');
+    } catch (cause) { setPasswordError(cause instanceof Error ? cause.message : 'Unable to send a reset link.'); }
+    finally { setResetBusy(false); }
+  }
   async function deleteRef(referenceId: string, referenceName: string) {
     if (!confirm(`Permanently delete “${referenceName}”?`)) return;
     try { await mutate({ action: 'reference.delete', entity: tab, id: referenceId }); }
     catch { /* mutate shows the reason */ }
   }
   const rows = meta[tab];
-  return <><PageHeading eyebrow="PREFERENCES" title="Settings" description="Make this workspace yours."/>
-    <div className="settings-grid">{!localMode && <div className="panel"><PanelHead title="Profile & account" subtitle="Choose how your account appears in My Finance"/><form className="profile-form" onSubmit={saveProfile}><label className="field"><span>Profile name</span><input value={displayName} onChange={e => setEditedName(e.target.value)} maxLength={80} required/></label><div className="setting-line"><div><strong>Email</strong><span>Your sign-in email</span></div><span>{email}</span></div><div className="profile-message-slot" aria-live="polite">{profileError ? <div className="profile-message error" role="alert">{profileError}</div> : profileSaved ? <div className="profile-message" role="status">{profileSaved}</div> : null}</div><div className="profile-actions"><button className="button secondary" disabled={profileBusy}>Save name</button><button type="button" className="text-button danger-text" disabled={profileBusy} onClick={signOutProfile}><LogOut size={15}/> Sign out</button></div></form></div>}<div className="panel"><PanelHead title="Appearance" subtitle="Choose the look that feels right"/><div className="theme-options">{(['light','dark','system'] as const).map(x => <button key={x} className={meta.settings.theme === x ? 'theme-choice active' : 'theme-choice'} onClick={() => mutate({ action: 'settings.save', values: { theme: x } })}>{x === 'dark' ? <Moon size={18}/> : <Sun size={18}/>} {x[0].toUpperCase()+x.slice(1)}</button>)}</div><div className="setting-line"><div><strong>Time zone</strong><span>Used for today and recurring due dates</span></div><span>{meta.settings.time_zone}</span></div><div className="setting-line"><div><strong>{localMode ? 'Storage' : 'Theme setting'}</strong><span>{localMode ? 'Private file in this project' : 'Saved to your private account'}</span></div><span>{localMode ? 'This laptop' : 'All your devices'}</span></div></div>
-      <div className="panel"><PanelHead title="Reporting currency" subtitle="Choose it from the top bar"/><div className="currency-current"><span>Current reporting currency</span><strong>{meta.settings.currency_code}</strong></div><p className="muted small-text">Transactions keep their original amount and currency. Dashboard and report values use cached reference rates from each transaction date.</p></div></div>
-    <div className="panel manage-panel"><PanelHead title="Manage your lists" subtitle="Keep categories, accounts, methods, and tags organized"/><div className="tab-row">{(['categories','accounts','payment_methods','tags'] as const).map(x => <button className={tab === x ? 'active' : ''} onClick={() => { setTab(x); setKind(x === 'accounts' ? 'card' : 'expense'); setName(''); setEditingRef(null); }} key={x}>{x === 'payment_methods' ? 'Payment methods' : x[0].toUpperCase()+x.slice(1)}</button>)}</div><form className="add-reference" onSubmit={saveRef}><input value={name} onChange={e => setName(e.target.value)} placeholder={`${editingRef ? 'Rename' : 'New'} ${tab === 'payment_methods' ? 'payment method' : tab.slice(0,-1)}`} required/>{tab === 'accounts' && <span className="account-kind-label" style={{ display: 'inline-flex', alignItems: 'center', height: 39, padding: '0 12px', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--muted)', fontSize: 11 }}>Card</span>}<button className="button primary" disabled={busy}><Plus size={16}/> {editingRef ? 'Save' : 'Add'}</button>{editingRef && <button type="button" className="button ghost" onClick={() => { setEditingRef(null); setName(''); }}>Cancel</button>}</form><div className="reference-list">{rows.map(x => <div className="reference-row" key={x.id}><span className="reference-label">{(tab === 'categories' || tab === 'payment_methods') && <ReferenceIcon kind={tab === 'categories' ? 'category' : 'payment'} name={x.name} size={15}/>}<span>{x.name}{tab !== 'categories' && x.kind && <em>{x.kind}</em>}{Boolean(x.usage_count) && <em>{x.usage_count} in use</em>}</span></span><div><button className="text-button" onClick={() => { setEditingRef(x.id); setName(x.name); setKind(x.kind ?? 'card'); }}>Edit</button><button className="text-button" disabled={busy} onClick={() => mutate({ action: 'reference.archive', entity: tab, id: x.id, active: !x.active })}>{x.active ? 'Archive' : 'Restore'}</button><button className="text-button danger-text" disabled={busy || Boolean(x.usage_count)} title={x.usage_count ? `Used by ${x.usage_count} records—archive instead` : 'Permanently delete'} onClick={() => deleteRef(x.id, x.name)}>Delete</button></div></div>)}</div></div>
-    <div className="panel export-panel"><div><PanelHead title="Your data, yours to keep" subtitle="Download all transactions in a spreadsheet-friendly CSV file"/></div><Link href="/api/export" className="button secondary"><Download size={17}/> Export CSV</Link></div>
+  return <><PageHeading eyebrow="PREFERENCES" title="Settings" description="Manage your account and workspace preferences."/>
+    <section className="settings-section"><h2 className="settings-section-title">Account</h2><div className="settings-grid">
+      {!localMode && <div className="panel"><PanelHead title="Profile" subtitle="How your account appears in My Finance"/><form className="profile-form" onSubmit={saveProfile}><label className="field"><span>Profile name</span><input value={displayName} onChange={e => setEditedName(e.target.value)} maxLength={80} required/></label><div className="setting-line"><div><strong>Email</strong><span>Your sign-in email</span></div><span>{email}</span></div><div className="profile-message-slot" aria-live="polite">{profileError ? <div className="profile-message error" role="alert">{profileError}</div> : profileSaved ? <div className="profile-message" role="status">{profileSaved}</div> : null}</div><div className="profile-actions"><button className="button secondary" disabled={profileBusy}>Save name</button><button type="button" className="text-button danger-text" disabled={profileBusy} onClick={signOutProfile}><LogOut size={15}/> Sign out</button></div></form></div>}
+      {!localMode && <div className="panel"><PanelHead title="Password" subtitle={accountProviders.includes('email') ? 'Change your sign-in password' : 'Manage password access for your account'}/>{accountProviders.includes('email') ? <form className="profile-form" onSubmit={changePassword}><label className="field"><span>Current password</span><input type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required disabled={passwordBusy}/></label><label className="field"><span>New password</span><input type="password" autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} required disabled={passwordBusy}/></label><label className="field"><span>Confirm new password</span><input type="password" autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={8} required disabled={passwordBusy}/></label><div className="profile-message-slot" aria-live="polite">{passwordError ? <div className="profile-message error" role="alert">{passwordError}</div> : passwordMessage ? <div className="profile-message" role="status">{passwordMessage}</div> : null}</div><button className="button secondary" disabled={passwordBusy}>{passwordBusy ? 'Updating…' : 'Update password'}</button></form> : <><p className="muted small-text">This account signs in with Google. Request an email link to set or reset a password.</p><button className="button secondary" onClick={sendPasswordReset} disabled={resetBusy}>{resetBusy ? 'Sending…' : 'Send password reset link'}</button><div className="profile-message-slot" aria-live="polite">{passwordError ? <div className="profile-message error" role="alert">{passwordError}</div> : passwordMessage ? <div className="profile-message" role="status">{passwordMessage}</div> : null}</div></>}</div>}
+    </div></section>
+    <section className="settings-section"><h2 className="settings-section-title">Preferences</h2><div className="settings-grid"><div className="panel"><PanelHead title="Appearance" subtitle="Choose the look that feels right"/><div className="theme-options">{(['light','dark','system'] as const).map(x => <button key={x} className={meta.settings.theme === x ? 'theme-choice active' : 'theme-choice'} onClick={() => mutate({ action: 'settings.save', values: { theme: x } })}>{x === 'dark' ? <Moon size={18}/> : <Sun size={18}/>} {x[0].toUpperCase()+x.slice(1)}</button>)}</div><div className="setting-line"><div><strong>{localMode ? 'Storage' : 'Theme setting'}</strong><span>{localMode ? 'Private file in this project' : 'Saved to your private account'}</span></div><span>{localMode ? 'This laptop' : 'All your devices'}</span></div></div><div className="panel"><PanelHead title="Time zone" subtitle="Used for today and recurring due dates"/><form className="profile-form" onSubmit={saveTimeZone}><label className="field"><span>Your time zone</span><input list="finance-time-zones" value={timeZone} onChange={event => { setTimeZone(event.target.value); setTimeZoneSaved(''); }} required aria-describedby="timezone-help"/><datalist id="finance-time-zones">{timeZones.map(zone => <option value={zone} key={zone}/>)}</datalist></label><p id="timezone-help" className="muted small-text">Search by city or region, such as America/Toronto or Europe/London.</p><div className="profile-message-slot" aria-live="polite">{timeZoneSaved && <div className={`profile-message${timeZoneSaved.includes('saved') ? '' : ' error'}`} role={timeZoneSaved.includes('saved') ? 'status' : 'alert'}>{timeZoneSaved}</div>}</div><button className="button secondary" disabled={busy || timeZone === meta.settings.time_zone}>Save time zone</button></form></div></div></section>
+    <section className="settings-section"><h2 className="settings-section-title">Data</h2><div className="settings-grid"><div className="panel"><PanelHead title="Reporting currency" subtitle="Choose it from the top bar"/><div className="currency-current"><span>Current reporting currency</span><strong>{meta.settings.currency_code}</strong></div><p className="muted small-text">Transactions keep their original amount and currency. Dashboard and report values use cached reference rates from each transaction date.</p></div>
+    <div className="panel manage-panel"><PanelHead title="Manage your lists" subtitle="Organize categories, accounts, payment methods, and tags"/><div className="tab-row">{(['categories','accounts','payment_methods','tags'] as const).map(x => <button className={tab === x ? 'active' : ''} onClick={() => { setTab(x); setKind(x === 'accounts' ? 'card' : 'expense'); setName(''); setEditingRef(null); }} key={x}>{x === 'payment_methods' ? 'Payment methods' : x[0].toUpperCase()+x.slice(1)}</button>)}</div><form className="add-reference" onSubmit={saveRef}><input value={name} onChange={e => setName(e.target.value)} placeholder={`${editingRef ? 'Rename' : 'New'} ${tab === 'payment_methods' ? 'payment method' : tab.slice(0,-1)}`} required/>{tab === 'accounts' && <span className="account-kind-label" style={{ display: 'inline-flex', alignItems: 'center', height: 39, padding: '0 12px', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--muted)', fontSize: 11 }}>Card</span>}<button className="button primary" disabled={busy}><Plus size={16}/> {editingRef ? 'Save' : 'Add'}</button>{editingRef && <button type="button" className="button ghost" onClick={() => { setEditingRef(null); setName(''); }}>Cancel</button>}</form><div className="reference-list">{rows.map(x => <div className="reference-row" key={x.id}><span className="reference-label">{(tab === 'categories' || tab === 'payment_methods') && <ReferenceIcon kind={tab === 'categories' ? 'category' : 'payment'} name={x.name} size={15}/>}<span>{x.name}{tab !== 'categories' && x.kind && <em>{x.kind}</em>}{Boolean(x.usage_count) && <em>{x.usage_count} in use</em>}</span></span><div><button className="text-button" onClick={() => { setEditingRef(x.id); setName(x.name); setKind(x.kind ?? 'card'); }}>Edit</button><button className="text-button" disabled={busy} onClick={() => mutate({ action: 'reference.archive', entity: tab, id: x.id, active: !x.active })}>{x.active ? 'Archive' : 'Restore'}</button><button className="text-button danger-text" disabled={busy || Boolean(x.usage_count)} title={x.usage_count ? `Used by ${x.usage_count} records—archive instead` : 'Permanently delete'} onClick={() => deleteRef(x.id, x.name)}>Delete</button></div></div>)}</div></div>
+    <div className="panel export-panel"><div><PanelHead title="Export your data" subtitle="Download all transactions in a spreadsheet-friendly CSV file"/></div><Link href="/api/export" className="button secondary"><Download size={17}/> Export CSV</Link></div></div></section>
     {!localMode && <AccountDeletionPanel email={email}/>}
   </>;
 }
