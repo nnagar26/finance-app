@@ -60,6 +60,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recurringReview, setRecurringReview] = useState<{ id: string; choice: 'post' | 'skip' } | null>(null);
   const [activeTheme, setActiveTheme] = useState<'light' | 'dark'>('light');
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -171,6 +172,12 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
       setRevision(x => x + 1); return data.result;
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to save.'); throw e; }
     finally { setBusy(false); }
+  }
+  async function reviewRecurring(id: string, choice: 'post' | 'skip') {
+    setRecurringReview({ id, choice });
+    try { await mutate({ action: 'recurring.review', id, choice }); }
+    catch { /* mutate displays the error */ }
+    finally { setRecurringReview(null); }
   }
   async function deleteRecurring(rule: RecurringRule) {
     if (!confirm(`Delete “${rule.name}”? This stops and removes its upcoming recurring transactions. Transactions already posted will remain in your history and reports.`)) return;
@@ -313,7 +320,7 @@ export default function FinanceApp({ section, email, localMode = false }: { sect
             </div><div className="panel"><PanelHead title="Transactions" subtitle={`${calendar.dayRows.length} on this day`}/><TransactionList rows={calendar.dayRows} nameOf={nameOf} money={money} compact onEdit={openEdit}/></div></div></div>
           </> : <Loading/>}</>}
         {section === 'recurring' && meta && <><PageHeading eyebrow="ROUTINES" title="Recurring transactions" description="Keep regular payments ready without losing control." right={<button className="button secondary" onClick={() => setEditingRule(null)}><Plus size={17}/> New recurring item</button>}/>
-          {dueCount > 0 && <div className="panel due-panel"><PanelHead title="Ready for review" subtitle="Post or skip each due item. Only posted items affect your totals."/>{meta.recurring_rules.filter(r => r.active && r.next_due_on <= localDate(new Date(), meta.settings.time_zone)).map(r => <div className="rule-row" key={r.id}><div className="rule-icon"><Repeat2 size={19}/></div><div className="rule-main"><div className="rule-name"><strong>{r.name}</strong><span className={`rule-type ${recurringEffect(r)}`}>{recurringType(r)}</span></div><span>Due {r.next_due_on} · {r.frequency}</span></div><strong>{formatMoney(r.amount_minor, r.currency_code)}</strong><div className="rule-actions"><button className="button small ghost" disabled={busy} onClick={() => mutate({ action: 'recurring.review', id: r.id, choice: 'skip' })}>Skip</button><button className="button small primary" disabled={busy} onClick={() => mutate({ action: 'recurring.review', id: r.id, choice: 'post' })}>Post</button></div></div>)}</div>}
+          {dueCount > 0 && <div className="panel due-panel"><PanelHead title="Ready for review" subtitle="Post or skip each due item. Only posted items affect your totals."/>{meta.recurring_rules.filter(r => r.active && r.next_due_on <= localDate(new Date(), meta.settings.time_zone)).map(r => <div className="rule-row" key={r.id}><div className="rule-icon"><Repeat2 size={19}/></div><div className="rule-main"><div className="rule-name"><strong>{r.name}</strong><span className={`rule-type ${recurringEffect(r)}`}>{recurringType(r)}</span></div><span>Due {r.next_due_on} · {r.frequency}</span></div><strong>{formatMoney(r.amount_minor, r.currency_code)}</strong><div className="rule-actions"><button className={`button small ghost${recurringReview?.id === r.id && recurringReview.choice === 'skip' ? ' is-pending' : ''}`} disabled={busy} onClick={() => reviewRecurring(r.id, 'skip')}>{recurringReview?.id === r.id && recurringReview.choice === 'skip' ? 'Skipping…' : 'Skip'}</button><button className={`button small primary${recurringReview?.id === r.id && recurringReview.choice === 'post' ? ' is-pending' : ''}`} disabled={busy} onClick={() => reviewRecurring(r.id, 'post')}>{recurringReview?.id === r.id && recurringReview.choice === 'post' ? 'Posting…' : 'Post'}</button></div></div>)}</div>}
           <div className="panel"><PanelHead title="Your recurring items" subtitle="Review the next due date and amount before posting"/>{meta.recurring_rules.length ? meta.recurring_rules.map(r => <div className="rule-row" key={r.id}><div className="rule-icon"><Repeat2 size={19}/></div><div className="rule-main"><div className="rule-name"><strong>{r.name}</strong><span className={`rule-type ${recurringEffect(r)}`}>{recurringType(r)}</span></div><span>{r.frequency} · Next {r.next_due_on} · {r.active ? 'Active' : 'Paused'}</span></div><strong>{formatMoney(r.amount_minor, r.currency_code)}</strong><div className="rule-actions"><button className="button small ghost" onClick={() => setEditingRule(r)}>Edit</button><button className="button small ghost" disabled={busy} onClick={() => mutate({ action: 'recurring.archive', id: r.id, active: !r.active })}>{r.active ? 'Pause' : 'Resume'}</button><button className="button small ghost recurring-delete" disabled={busy} onClick={() => deleteRecurring(r)}>Delete</button></div></div>) : <Empty title="Nothing recurring yet" description="Add rent, salary, subscriptions, or any routine payment."/>}</div>
         </>}
         {section === 'settings' && meta && <SettingsPage meta={meta} email={email} localMode={localMode} money={money} mutate={mutate} busy={busy} profileName={accountName} onSaveProfileName={saveProfileName} onSignOut={signOut}/>}
